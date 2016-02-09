@@ -1,0 +1,3 @@
+[gui_scripts]
+masr_design_tool = masr_design_tool.main_GUI:main
+

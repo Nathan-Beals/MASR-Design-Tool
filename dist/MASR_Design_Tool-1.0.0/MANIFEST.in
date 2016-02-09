@@ -1,0 +1,4 @@
+include INSTALL.txt
+include *.txt, *.py
+recursive-include docs *.pdf
+recursive-include masr_design_tool.databases *.bak, *.dat, *.dir
