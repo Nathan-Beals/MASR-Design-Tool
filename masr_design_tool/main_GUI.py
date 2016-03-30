@@ -209,8 +209,7 @@ class WeightingsWindow(Toplevel):
         self.weightings_vars = []
         self.weightings_widgets = {}
         row = 1
-        i = 0
-        for req in requirements:
+        for i, req in enumerate(requirements):
             req_label = ttk.Label(self.mainframe, text=req)
             req_weight = IntVar()
             req_scale = ttk.Scale(self.mainframe, orient=HORIZONTAL, length=200, from_=1, to=100, variable=req_weight,
@@ -225,7 +224,6 @@ class WeightingsWindow(Toplevel):
             self.weightings_widgets[req] = (req_scale, req_entry, req_weight)
             self.weightings_vars.append(req_weight)
             row += 1
-            i += 1
 
         self.arrow_low_label = ttk.Label(self.mainframe, text='less')
         self.arrow_high_label = ttk.Label(self.mainframe, text='more')
@@ -255,10 +253,8 @@ class WeightingsWindow(Toplevel):
         Saves the user selected values to the self.master.weights dictionary variable and closes the window.
         """
         weight_vals = [var.get() for var in self.weightings_vars]
-        i = 0
-        for val_list in self.master.weights.values():
+        for i, val_list in enumerate(self.master.weights.values()):
             val_list[0] = weight_vals[i]
-            i += 1
         self.destroy()
 
 
@@ -306,14 +302,12 @@ class SensorFrame(ttk.Frame):
     def get_selected(self):
         selected_list = []
         sensor_db = shelve.open(db_location + 'sensordb')
-        i = 0
         # Loop through sensors
-        for sensor in sensor_db.values():
+        for i, sensor in enumerate(sensor_db.values()):
             this_sensor = sensor
             # If sensor is selected add it to the selected list
             if self.checkvar_list[i].get() == 1:
                 selected_list.append(this_sensor)
-            i += 1
         sensor_db.close()
         return selected_list
 
@@ -1052,8 +1046,7 @@ class ViewFailedStats(Toplevel):
                 infeasible_reasons[alt.feasible[0]] = 1
         sorted_reasons = sorted(infeasible_reasons, key=infeasible_reasons.get, reverse=True)
 
-        grid_row = 2
-        for reason in sorted_reasons:
+        for grid_row, reason in enumerate(sorted_reasons, start=2):
             reason_label = ttk.Label(self.mainframe, text=reason)
             num_alts_label = ttk.Label(self.mainframe, text=str(infeasible_reasons[reason]))
             fail_sum = 0
@@ -1071,7 +1064,6 @@ class ViewFailedStats(Toplevel):
             num_alts_label.grid(column=1, row=grid_row, pady=5, padx=10)
             avg_fail_label.grid(column=2, row=grid_row, pady=5, padx=10)
             constraint_label.grid(column=3, row=grid_row, pady=5, padx=10)
-            grid_row += 1
 
 
 def main():

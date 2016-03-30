@@ -106,10 +106,9 @@ class Displayable(object):
             heading_separator = ttk.Separator(mainframe, orient=HORIZONTAL)
             heading_separator.grid(column=1, row=1, columnspan=label_col, sticky=(E, W))
 
-        attr_col = 0
         grid_col = 1
         current_obj_vars = OrderedDict()
-        for attr in display_real_names:
+        for attr_col, attr in enumerate(display_real_names):
             attr_val = getattr(self, attr)
             if isinstance(attr_val, dict):
                 attr_entry_value = attr_val['value']
@@ -130,7 +129,7 @@ class Displayable(object):
                 temp_unit_cb.grid(column=grid_col, row=2, padx='0 3', pady=5)
                 # The current_obj_vars list contains the information for each object's widgets in the form:
                 # [value entry widget, value textvariable, unit combobox, "old" unit]
-                # "old" unit is initialized and then updates whenever the user selects a new unit. This is inluded so
+                # "old" unit is initialized and then updates whenever the user selects a new unit. This is included so
                 # that both the old unit and new unit are available within new_unit_selection.
                 current_obj_vars[attr] = [temp_val_entry, temp_textvariable, temp_unit_cb, temp_unit_cb.get()]
             else:
@@ -148,7 +147,6 @@ class Displayable(object):
                 mainframe.columnconfigure(grid_col, weight=1)
                 grid_col += 1
             grid_col += 1
-            attr_col += 1
 
         def new_unit_selection(event, obj_attr):
             """

@@ -20,7 +20,7 @@ class Quadrotor(Vehicle):
     part_attrs = [('P/M Combo', 'pmcombo'), ('Battery', 'battery'), ('Print Material', 'pmaterial')]
 
     # If you want to export data to the csv file when the alternative is exported append the info to the export_info
-    # list using a touple of the format ('Pretty name', 'attribute real name', unit list (if applicable))
+    # list using a tuple of the format ('Pretty name', 'attribute real name', unit list (if applicable))
     export_info = part_attrs + Vehicle.perf_attrs_export + geometry_attrs
 
     def __init__(self, pmcombo, battery, pmaterial, cmaterial, geometry=None, feasible=True, score=0, pareto=False):
@@ -96,10 +96,9 @@ class Quadrotor(Vehicle):
             heading_separator = ttk.Separator(mainframe, orient=HORIZONTAL)
             heading_separator.grid(column=1, row=1, columnspan=label_col, sticky=(E, W))
 
-        attr_col = 0
         grid_col = 1
         current_obj_vars = OrderedDict()
-        for attr in display_real_names:
+        for attr_col, attr in enumerate(display_real_names):
             attr_val = getattr(self, attr)
             if isinstance(attr_val, dict):
                 attr_entry_value = attr_val['value']
@@ -138,7 +137,6 @@ class Quadrotor(Vehicle):
                 mainframe.columnconfigure(grid_col, weight=1)
                 grid_col += 1
             grid_col += 1
-            attr_col += 1
 
         def new_unit_selection(event, obj_attr):
             """

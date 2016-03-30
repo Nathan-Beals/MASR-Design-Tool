@@ -61,11 +61,9 @@ class Exportdb(Toplevel):
 
         # Retrieve selected database names
         selected_names = []
-        i = 0
-        for db_name in self.db_dict.values():
+        for i, db_name in enumerate(self.db_dict.values()):
             if self.checkvar_list[i].get() == 1:
                 selected_names.append(db_name)
-            i += 1
 
         # Loop through selected databases and save to a .csv file located at dirname/db_name.csv
         for db_name in selected_names:

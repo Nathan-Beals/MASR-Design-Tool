@@ -261,7 +261,7 @@ def hub_layout_simple(bat_dim, sensors):
     # Start with a guess equal to the maximum component dimension plus a comfort factor. For most cases this will be the
     # battery max dimension and this guess will be the final hub size.
     hub_size = max_comp_dim * 1.05
-    # However, it is concievable that a large, squareish component could still not fit in the hub after taking into
+    # However, it is conceivable that a large, squareish component could still not fit in the hub after taking into
     # account the areas for the arm attachments, therefore we check the other components and resize if necessary.
     for size in comp_xy_sizes:
         if all((dim >= (hub_size-2*arm_dim) for dim in size)):

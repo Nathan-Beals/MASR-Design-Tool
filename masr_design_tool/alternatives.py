@@ -240,15 +240,13 @@ def interp(x, y, xint):
         yint = y[x.index[xint]]
         return yint
 
-    i = 0
-    for xp in x:
+    for i, xp in enumerate(x):
         if xint < xp:
             p2 = (xp, y[i])
             p1 = (x[i-1], y[i-1])
             slope = (p2[1]-p1[1])/(p2[0]-p1[0])
             yint = slope*(xint-p1[0]) + p1[1]
             return yint
-        i += 1
 
 
 def score_alternatives(alternatives, weightings):
@@ -278,8 +276,7 @@ def score_alternatives(alternatives, weightings):
     # Loop through all performance attributes contained in the weightings dictionary.
     total_d_pos = [0] * len(alternatives)
     total_d_neg = [0] * len(alternatives)
-    i = 0
-    for perf_attr in weightings:
+    for i, perf_attr in enumerate(weightings):
         weight = norm_wgt_vals[i]
         try:
             attr_vals = [getattr(quad, perf_attr)['value'] for quad in alternatives]
@@ -301,7 +298,6 @@ def score_alternatives(alternatives, weightings):
         d_neg = [(val-neg_ideal)**2 for val in weighted_vals]
         total_d_pos = map(add, total_d_pos, d_pos)
         total_d_neg = map(add, total_d_neg, d_neg)
-        i += 1
     total_d_pos = [x**0.5 for x in total_d_pos]
     total_d_neg = [x**0.5 for x in total_d_neg]
     closeness = map(lambda pos, neg: float(neg)/(pos+neg), total_d_pos, total_d_neg)
@@ -339,10 +335,8 @@ def score_alternatives(alternatives, weightings):
             alt.pareto = True
 
     # Assign TOPSIS scores to the quad.score attribute.
-    i = 0
-    for quad in alternatives:
+    for i, quad in enumerate(alternatives):
         quad.score = closeness[i]
-        i += 1
     return alternatives
 
 
