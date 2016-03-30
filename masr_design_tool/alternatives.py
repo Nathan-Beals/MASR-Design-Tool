@@ -214,7 +214,7 @@ def is_feasible(quad_attrs, constraints):
     hub_separation = convert_unit(hub_separation, 'in', 'm')
     arm_len = convert_unit(arm_len, 'in', 'm')
     vehicle_performance = [vehicle_weight, payload_capacity, vehicle_endurance, size, build_time]
-    vehicle_geometry = [hub_size, hub_separation, hub_grid, arm_len]
+    vehicle_geometry = [hub_size, hub_separation, hub_grid, arm_len, hub_corner_len]
     return 'true', vehicle_performance, vehicle_geometry
 
 

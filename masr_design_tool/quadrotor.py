@@ -36,9 +36,9 @@ class Quadrotor(Vehicle):
         Vehicle.__init__(self)
 
         if geometry is None:
-            geometry = [0] * 4
+            geometry = [0] * 5
 
-        self.hub_size, self.hub_separation, self.hub_grid, self.arm_len = geometry
+        self.hub_size, self.hub_separation, self.hub_grid, self.arm_len, self.hub_corner_len = geometry
 
         self.pmcombo = pmcombo
         self.prop = self.pmcombo.prop
@@ -60,11 +60,12 @@ class Quadrotor(Vehicle):
         specifically when the vehicle object has been determined to be feasible and geometry values have been
         calculated.
         """
-        hub_size, hub_separation, hub_grid, arm_len = geometry
+        hub_size, hub_separation, hub_grid, arm_len, hub_corner_len = geometry
         self.hub_size = {'value': hub_size, 'unit': 'm'}
         self.hub_separation = {'value': hub_separation, 'unit': 'm'}
         self.hub_grid = hub_grid
         self.arm_len = {'value': arm_len, 'unit': 'm'}
+        self.hub_corner_len = {'value': hub_corner_len, 'unit': 'm'}
 
     def display_frame(self, master, header=False, mode='regular', return_widgets=False):
         """

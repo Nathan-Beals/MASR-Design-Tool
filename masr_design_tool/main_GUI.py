@@ -676,9 +676,11 @@ class AlternativesFrame(ttk.Frame):
         self.exp_alts_button = ttk.Button(self.button_frame, text='Export feasible alts',
                                           command=self.export_alternatives)
         self.view_fail_stats_button = ttk.Button(self.button_frame, text='Failure Stats', command=self.view_fail_stats)
+        self.build_model_button = ttk.Button(self.button_frame, text='Build Model', command=self.build_model)
         self.view_details_button = ttk.Button(self.button_frame, text='View Details', command=self.view_details)
         self.total_quit_button = ttk.Button(self.button_frame, text='Close Tool', command=self.close_tool)
         self.total_quit_button.pack(side=RIGHT)
+        self.build_model_button.pack(side=RIGHT)
         self.view_details_button.pack(side=RIGHT, padx=3)
         self.view_fail_stats_button.pack(side=RIGHT, padx='3 0')
         self.exp_alts_button.pack(side=RIGHT)
@@ -785,6 +787,18 @@ class AlternativesFrame(ttk.Frame):
         quad_selected_indx = self.alt_view_frame.interior.current_object_selection.get()
         selected_quad = self.f_alternatives[quad_selected_indx]
         ViewQuadDetails(self, selected_quad)
+
+    def build_model(self):
+        if not self.f_alternatives:
+            return
+        quad_selected_indx = self.alt_view_frame.interior.current_object_selection.get()
+        selected_quad = self.f_alternatives[quad_selected_indx]
+        try:
+            import sw14
+            sw14.build_model(selected_quad)
+        except ImportError:
+            self.alt_infovar.set("Required modules not installed for export.")
+            return
 
     def view_fail_stats(self):
         if not self.alternatives:
