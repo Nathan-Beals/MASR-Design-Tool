@@ -41,7 +41,7 @@ def build_model(quad):
     eqMgr.Equation(1, "\"Hub_LayerSeparation_1_2\" = " + str(hub_separation))
     eqMgr.Equation(2, "\"Hub_Width\" = " + str(hub_size))
     eqMgr.Equation(3, "\"Arm_Base_Width\" = " + str(hub_corner_len))
-    eqMgr.Equation(5, "\"Arm_Length\" = " + str(arm_len))   
+    eqMgr.Equation(5, "\"Arm_Length\" = " + str(arm_len))
     
     # Rebuild the model so the new parameters take effect
     boolstatus = model.EditRebuild3
