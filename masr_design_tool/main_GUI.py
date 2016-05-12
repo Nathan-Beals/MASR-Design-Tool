@@ -15,7 +15,7 @@ import shelve
 from collections import OrderedDict
 import dbmanagement
 import export
-import alternatives
+import alternatives_new
 import tradespace
 from winplace import get_win_place
 from unitconversion import convert_unit
@@ -127,6 +127,9 @@ class VehicleReqFrame(ttk.Frame):
                                                      state='readonly', values=('Normal', 'High', 'Acrobatic'), width=7)
         self.maneuverability_combobox.current(0)
 
+        self.cover_checkvar = IntVar()
+        self.cover_check = ttk.Checkbutton(self.constraints_frame, text="Top plate cover", variable=self.cover_checkvar)
+
         # Grid constraints frame widgets
         self.vehicle_req_title.grid(column=1, row=0, columnspan=4, padx=12, pady=12)
 
@@ -145,8 +148,10 @@ class VehicleReqFrame(ttk.Frame):
         self.max_size_entry.grid(column=2, row=4, sticky=W)
         self.max_size_unit_cb.grid(column=3, row=4, sticky=W, padx='0 5', pady='2 2')
 
-        self.maneuverability_label.grid(column=1, row=5, sticky=W, padx=5, pady='2 5')
-        self.maneuverability_combobox.grid(column=2, row=5, columnspan=2, sticky=W, pady='2 5')
+        self.maneuverability_label.grid(column=1, row=5, sticky=W, padx=5, pady='2 2')
+        self.maneuverability_combobox.grid(column=2, row=5, columnspan=2, sticky=W, pady='2 2')
+
+        self.cover_check.grid(column=1, row=6, sticky=W, padx=5, pady='2 5')
 
         # Manage constraints frame resizing
         self.columnconfigure(0, weight=1)
@@ -369,9 +374,9 @@ class MaxBuildDimFrame(ttk.Frame):
         cutter_db.close()
 
         # Create widgets within maximum build dimensions frame (which is within manufacturing requirements frame)
-        self.max_build_dim_label = ttk.Label(self, text='Maximum Build Dimensions')
+        self.max_build_dim_label = ttk.Label(self, text='3D Printer Options')
 
-        self.printer_label = ttk.Label(self, text='3D Printer')
+        self.printer_label = ttk.Label(self, text='Printer')
         self.printer_combobox = ttk.Combobox(self, state='readonly', values=self.printername_list)
         self.printer_combobox.bind("<<ComboboxSelected>>", self.set_values)
         self.printer_combobox.current(0)
@@ -397,24 +402,28 @@ class MaxBuildDimFrame(ttk.Frame):
                                          lambda event, entry_name='printer_height':
                                          self.new_unit_selection(event, entry_name))
 
-        self.cutter_label = ttk.Label(self, text='Laser Cutter')
-        self.cutter_combobox = ttk.Combobox(self, state='readonly', values=self.cuttername_list)
-        self.cutter_combobox.bind("<<ComboboxSelected>>", self.set_values)
-        self.cutter_combobox.current(0)
+        # Create selectable list of print materials
+        self.pmat_label = ttk.Label(self, text='Print Materials')
+        self.pmatlist_frame = PrintingMaterialFrame(self)
 
-        self.cutter_len_label = ttk.Label(self, text='length')
-        self.cutter_len_entry = ttk.Entry(self, state='readonly', width=7)
-        self.cutter_len_unit_cb = ttk.Combobox(self, state='readonly', values=('m', 'cm', 'in'), width=3)
-        self.cutter_len_unit_cb.bind("<<ComboboxSelected>>",
-                                     lambda event, entry_name='cutter_len':
-                                     self.new_unit_selection(event, entry_name))
-
-        self.cutter_width_label = ttk.Label(self, text='width')
-        self.cutter_width_entry = ttk.Entry(self, state='readonly', width=7)
-        self.cutter_width_unit_cb = ttk.Combobox(self, state='readonly', values=('m', 'cm', 'in'), width=3)
-        self.cutter_width_unit_cb.bind("<<ComboboxSelected>>",
-                                       lambda event, entry_name='cutter_width':
-                                       self.new_unit_selection(event, entry_name))
+        # self.cutter_label = ttk.Label(self, text='Laser Cutter')
+        # self.cutter_combobox = ttk.Combobox(self, state='readonly', values=self.cuttername_list)
+        # self.cutter_combobox.bind("<<ComboboxSelected>>", self.set_values)
+        # self.cutter_combobox.current(0)
+        #
+        # self.cutter_len_label = ttk.Label(self, text='length')
+        # self.cutter_len_entry = ttk.Entry(self, state='readonly', width=7)
+        # self.cutter_len_unit_cb = ttk.Combobox(self, state='readonly', values=('m', 'cm', 'in'), width=3)
+        # self.cutter_len_unit_cb.bind("<<ComboboxSelected>>",
+        #                              lambda event, entry_name='cutter_len':
+        #                              self.new_unit_selection(event, entry_name))
+        #
+        # self.cutter_width_label = ttk.Label(self, text='width')
+        # self.cutter_width_entry = ttk.Entry(self, state='readonly', width=7)
+        # self.cutter_width_unit_cb = ttk.Combobox(self, state='readonly', values=('m', 'cm', 'in'), width=3)
+        # self.cutter_width_unit_cb.bind("<<ComboboxSelected>>",
+        #                                lambda event, entry_name='cutter_width':
+        #                                self.new_unit_selection(event, entry_name))
 
         # Initialize entry and combobox values based on first printer and cutter
         self.set_values()
@@ -435,14 +444,17 @@ class MaxBuildDimFrame(ttk.Frame):
         self.printer_height_entry.grid(column=1, row=5, sticky=W, pady='2 5')
         self.printer_height_unit_cb.grid(column=2, row=5, sticky=W, pady='2 5')
 
-        self.cutter_label.grid(column=3, row=1, columnspan=3, sticky=W, padx=5)
-        self.cutter_combobox.grid(column=3, row=2, columnspan=3, sticky=W, padx=5, pady='0 2')
-        self.cutter_len_label.grid(column=3, row=3, sticky=W, padx=5, pady='2 2')
-        self.cutter_len_entry.grid(column=4, row=3, sticky=W, pady='2 2')
-        self.cutter_len_unit_cb.grid(column=5, row=3, sticky=W, padx='0 5', pady='2 5')
-        self.cutter_width_label.grid(column=3, row=4, sticky=W, padx=5, pady='2 5')
-        self.cutter_width_entry.grid(column=4, row=4, sticky=W, pady='2 5')
-        self.cutter_width_unit_cb.grid(column=5, row=4, sticky=W, padx='0 5', pady='2 5')
+        self.pmat_label.grid(column=3, row=1, sticky=W, padx='10 0')
+        self.pmatlist_frame.grid(column=3, row=2, rowspan=6, sticky=E)
+
+        # self.cutter_label.grid(column=3, row=1, columnspan=3, sticky=W, padx=5)
+        # self.cutter_combobox.grid(column=3, row=2, columnspan=3, sticky=W, padx=5, pady='0 2')
+        # self.cutter_len_label.grid(column=3, row=3, sticky=W, padx=5, pady='2 2')
+        # self.cutter_len_entry.grid(column=4, row=3, sticky=W, pady='2 2')
+        # self.cutter_len_unit_cb.grid(column=5, row=3, sticky=W, padx='0 5', pady='2 5')
+        # self.cutter_width_label.grid(column=3, row=4, sticky=W, padx=5, pady='2 5')
+        # self.cutter_width_entry.grid(column=4, row=4, sticky=W, pady='2 5')
+        # self.cutter_width_unit_cb.grid(column=5, row=4, sticky=W, padx='0 5', pady='2 5')
 
         # Manage frame resizing
         self.columnconfigure(0, weight=1)
@@ -460,7 +472,7 @@ class MaxBuildDimFrame(ttk.Frame):
         printer_db = shelve.open(db_location + 'printerdb')
         cutter_db = shelve.open(db_location + 'cutterdb')
         self.printer_combobox['width'] = len(self.printer_combobox.get()) + 2
-        self.cutter_combobox['width'] = len(self.cutter_combobox.get()) + 2
+        # self.cutter_combobox['width'] = len(self.cutter_combobox.get()) + 2
         if not printer_db:
             self.printer_combobox.current(0)
             self.printer_len_unit_cb.current(0)
@@ -489,24 +501,24 @@ class MaxBuildDimFrame(ttk.Frame):
             self.printer_height_unit_cb.current(self.printer_height_unit_cb['values']
                                                 .index(str(current_printer.height['unit'])))
 
-        if not cutter_db:
-            self.cutter_combobox.current(0)
-            self.cutter_len_unit_cb.current(0)
-            self.cutter_width_unit_cb.current(0)
-        else:
-            current_cutter = cutter_db[self.cutter_combobox.get()]
-            self.cutter_len_entry['state'] = NORMAL
-            self.cutter_len_entry.delete(0, END)
-            self.cutter_len_entry.insert(0, '%0.3f' % current_cutter.length['value'])
-            self.cutter_len_entry['state'] = 'readonly'
-            self.cutter_len_unit_cb.current(self.cutter_len_unit_cb['values']
-                                            .index(str(current_cutter.length['unit'])))
-            self.cutter_width_entry['state'] = NORMAL
-            self.cutter_width_entry.delete(0, END)
-            self.cutter_width_entry.insert(0, '%0.3f' % current_cutter.width['value'])
-            self.cutter_width_entry['state'] = 'readonly'
-            self.cutter_width_unit_cb.current(self.cutter_width_unit_cb['values']
-                                              .index(str(current_cutter.width['unit'])))
+        # if not cutter_db:
+        #     self.cutter_combobox.current(0)
+        #     self.cutter_len_unit_cb.current(0)
+        #     self.cutter_width_unit_cb.current(0)
+        # else:
+        #     current_cutter = cutter_db[self.cutter_combobox.get()]
+        #     self.cutter_len_entry['state'] = NORMAL
+        #     self.cutter_len_entry.delete(0, END)
+        #     self.cutter_len_entry.insert(0, '%0.3f' % current_cutter.length['value'])
+        #     self.cutter_len_entry['state'] = 'readonly'
+        #     self.cutter_len_unit_cb.current(self.cutter_len_unit_cb['values']
+        #                                     .index(str(current_cutter.length['unit'])))
+        #     self.cutter_width_entry['state'] = NORMAL
+        #     self.cutter_width_entry.delete(0, END)
+        #     self.cutter_width_entry.insert(0, '%0.3f' % current_cutter.width['value'])
+        #     self.cutter_width_entry['state'] = 'readonly'
+        #     self.cutter_width_unit_cb.current(self.cutter_width_unit_cb['values']
+        #                                       .index(str(current_cutter.width['unit'])))
         printer_db.close()
         cutter_db.close()
 
@@ -519,7 +531,7 @@ class MaxBuildDimFrame(ttk.Frame):
         p_db = shelve.open(db_location + 'printerdb')
         c_db = shelve.open(db_location + 'cutterdb')
         selected_printer = p_db[self.printer_combobox.get()]
-        selected_cutter = c_db[self.cutter_combobox.get()]
+        # selected_cutter = c_db[self.cutter_combobox.get()]
         if entry_name == 'printer_len':
             self.printer_len_entry['state'] = NORMAL
             self.printer_len_entry.delete(0, END)
@@ -538,18 +550,18 @@ class MaxBuildDimFrame(ttk.Frame):
             new_val = convert_unit(selected_printer.height['value'], 'm', self.printer_height_unit_cb.get())
             self.printer_height_entry.insert(0, '%0.3f' % new_val)
             self.printer_height_entry['state'] = 'readonly'
-        elif entry_name == 'cutter_len':
-            self.cutter_len_entry['state'] = NORMAL
-            self.cutter_len_entry.delete(0, END)
-            new_val = convert_unit(selected_cutter.length['value'], 'm', self.cutter_len_unit_cb.get())
-            self.cutter_len_entry.insert(0, '%0.3f' % new_val)
-            self.cutter_len_entry['state'] = 'readonly'
-        elif entry_name == 'cutter_width':
-            self.cutter_width_entry['state'] = NORMAL
-            self.cutter_width_entry.delete(0, END)
-            new_val = convert_unit(selected_cutter.width['value'], 'm', self.cutter_width_unit_cb.get())
-            self.cutter_width_entry.insert(0, '%0.3f' % new_val)
-            self.cutter_width_entry['state'] = 'readonly'
+        # elif entry_name == 'cutter_len':
+        #     self.cutter_len_entry['state'] = NORMAL
+        #     self.cutter_len_entry.delete(0, END)
+        #     new_val = convert_unit(selected_cutter.length['value'], 'm', self.cutter_len_unit_cb.get())
+        #     self.cutter_len_entry.insert(0, '%0.3f' % new_val)
+        #     self.cutter_len_entry['state'] = 'readonly'
+        # elif entry_name == 'cutter_width':
+        #     self.cutter_width_entry['state'] = NORMAL
+        #     self.cutter_width_entry.delete(0, END)
+        #     new_val = convert_unit(selected_cutter.width['value'], 'm', self.cutter_width_unit_cb.get())
+        #     self.cutter_width_entry.insert(0, '%0.3f' % new_val)
+        #     self.cutter_width_entry['state'] = 'readonly'
         p_db.close()
         c_db.close()
 
@@ -567,14 +579,58 @@ class MaxBuildDimFrame(ttk.Frame):
         else:
             self.printer_combobox['values'] = ['No printers']
             self.printer_combobox.current(0)
-        if c_db:
-            self.cutter_combobox['values'] = c_db.keys()
-            self.cutter_combobox.current(0)
-        else:
-            self.cutter_combobox['values'] = ['No cutters']
-            self.cutter_combobox.current(0)
+        # if c_db:
+        #     self.cutter_combobox['values'] = c_db.keys()
+        #     self.cutter_combobox.current(0)
+        # else:
+        #     self.cutter_combobox['values'] = ['No cutters']
+        #     self.cutter_combobox.current(0)
         p_db.close()
         c_db.close()
+
+
+class PrintingMaterialFrame(ttk.Frame):
+    """
+    This is the ttk.Frame class which defines the pmat_frame within the manufacturing requirements frame. It is very
+    similar to the SensorFrame class.
+    """
+    def __init__(self, master):
+        ttk.Frame.__init__(self, master)
+        self.master = master
+        self.checkvar_list = []
+
+        # Create subframe to put checkboxes in
+        self.check_frame = ttk.Frame(self)
+
+        # Create list of sensors
+        self.refresh()
+
+    def refresh(self):
+        for widget in self.check_frame.children.values():
+            widget.destroy()
+        self.checkvar_list = []
+        pmat_db = shelve.open(db_location + 'printingmaterialdb')
+        for pmat in pmat_db.values():
+            checkvar = IntVar()
+            check = ttk.Checkbutton(self.check_frame, text=pmat.name, variable=checkvar)
+            check.pack(pady=5, anchor=W)
+            self.checkvar_list.append(checkvar)
+        pmat_db.close()
+
+        self.check_frame.pack_forget()
+        self.check_frame.pack(side=LEFT, pady=3, padx=12)
+
+    def get_selected(self):
+        selected_list = []
+        pmat_db = shelve.open(db_location + 'printingmaterialdb')
+        # Loop through sensors
+        for i, sensor in enumerate(pmat_db.values()):
+            this_sensor = sensor
+            # If sensor is selected add it to the selected list
+            if self.checkvar_list[i].get() == 1:
+                selected_list.append(this_sensor)
+        pmat_db.close()
+        return selected_list
 
 
 class DataMgtFrame(ttk.Frame):
@@ -674,7 +730,7 @@ class AlternativesFrame(ttk.Frame):
         self.view_details_button = ttk.Button(self.button_frame, text='View Details', command=self.view_details)
         self.total_quit_button = ttk.Button(self.button_frame, text='Close Tool', command=self.close_tool)
         self.total_quit_button.pack(side=RIGHT)
-        self.build_model_button.pack(side=RIGHT)
+        self.build_model_button.pack(side=RIGHT, padx='0 3')
         self.view_details_button.pack(side=RIGHT, padx=3)
         self.view_fail_stats_button.pack(side=RIGHT, padx='3 0')
         self.exp_alts_button.pack(side=RIGHT)
@@ -706,7 +762,7 @@ class AlternativesFrame(ttk.Frame):
     def find_alternatives(self):
         self.last_constraints = self.get_constraints()
         constraints = self.last_constraints
-        self.alternatives = alternatives.generate_alternatives(constraints)
+        self.alternatives = alternatives_new.generate_alternatives(constraints)
 
         # Note that "if alt.feasible is True" in the logic below is actually what I mean. "if alt.feasible" fails
         # because the logical value of a python string (see quadrotor.Quadrotor.feasible) is True.
@@ -719,16 +775,22 @@ class AlternativesFrame(ttk.Frame):
                     infeasible_reasons[alt.feasible[0]] += 1
                 else:
                     infeasible_reasons[alt.feasible[0]] = 1
-        sorted_reasons = sorted(infeasible_reasons, key=infeasible_reasons.get, reverse=True)
-        info_str = "%d/%d feasible alternatives. Most popular fail: %s (%d)" % (len(self.f_alternatives),
-                                                                                len(self.alternatives),
-                                                                                sorted_reasons[0],
-                                                                                max(infeasible_reasons.values()))
+
+        if not infeasible_reasons:
+            info_str = "%d/%d feasible alternatives. Zero failures." % (len(self.f_alternatives),
+                                                                        len(self.alternatives))
+        else:
+            sorted_reasons = sorted(infeasible_reasons, key=infeasible_reasons.get, reverse=True)
+            info_str = "%d/%d feasible alternatives. Most popular fail: %s (%d)" % (len(self.f_alternatives),
+                                                                                    len(self.alternatives),
+                                                                                    sorted_reasons[0],
+                                                                                    max(infeasible_reasons.values()))
+
         self.alt_infovar.set(info_str)
 
         # Now we want to score the feasible alternatives based on user-defined vehicle requirements weightings
         if self.f_alternatives:
-            self.f_alternatives = alternatives.score_alternatives(self.f_alternatives,
+            self.f_alternatives = alternatives_new.score_alternatives(self.f_alternatives,
                                                                   self.master.vehicle_req_frame.weights)
         self.alt_view_frame.interior.refresh_alt_sheet()
         self.alt_view_frame.interior.config(width=505)
@@ -746,7 +808,7 @@ class AlternativesFrame(ttk.Frame):
         p_db = shelve.open(db_location + 'printerdb')
         c_db = shelve.open(db_location + 'cutterdb')
         selected_printer = p_db[self.master.manuf_req_frame.max_build_dim_frame.printer_combobox.get()]
-        selected_cutter = c_db[self.master.manuf_req_frame.max_build_dim_frame.cutter_combobox.get()]
+        #selected_cutter = c_db[self.master.manuf_req_frame.max_build_dim_frame.cutter_combobox.get()]
 
         endurance_req = float(self.master.vehicle_req_frame.endurance_var.get())   # Endurance in minutes
         payload_req = float(self.master.vehicle_req_frame.payload_var.get())
@@ -756,17 +818,20 @@ class AlternativesFrame(ttk.Frame):
         max_size = float(self.master.vehicle_req_frame.max_size_var.get())
         max_size = convert_unit(max_size, self.master.vehicle_req_frame.max_size_unit_cb.get(), 'in')
         maneuverability = str(self.master.vehicle_req_frame.maneuver_var.get())
+        cover_flag = self.master.vehicle_req_frame.cover_checkvar.get()
         p_len = convert_unit(selected_printer.length['value'], selected_printer.length['unit'], 'in')
         p_width = convert_unit(selected_printer.width['value'], selected_printer.width['unit'], 'in')
         p_height = convert_unit(selected_printer.height['value'], selected_printer.height['unit'], 'in')
-        c_len = convert_unit(selected_cutter.length['value'], selected_cutter.length['unit'], 'in')
-        c_width = convert_unit(selected_cutter.width['value'], selected_cutter.width['unit'], 'in')
+        # c_len = convert_unit(selected_cutter.length['value'], selected_cutter.length['unit'], 'in')
+        # c_width = convert_unit(selected_cutter.width['value'], selected_cutter.width['unit'], 'in')
         max_build_time = float(self.master.manuf_req_frame.build_time_var.get())   # Build time in hours
         # Get selected sensors
         sensors = self.master.sensor_frame.get_selected()
+        pmaterials = self.master.manuf_req_frame.max_build_dim_frame.pmatlist_frame.get_selected()
 
+        # If more constraints are added make sure to check alternatives.py. Some modifications may need to be made.
         constraints = [endurance_req, payload_req, max_weight, max_size, maneuverability,
-                       p_len, p_width, p_height, c_len, c_width, max_build_time, sensors]
+                       p_len, p_width, p_height, max_build_time, sensors, pmaterials, cover_flag]
 
         p_db.close()
         c_db.close()

@@ -1,9 +1,9 @@
 import shelve
 import math
+from scipy.interpolate import interp1d
 from operator import add
 from unitconversion import convert_unit
 from quadrotor import Quadrotor
-import hublayout
 import dblocation
 
 db_location = dblocation.db_location
@@ -24,19 +24,18 @@ def generate_alternatives(constraints):
     """
     pmcombo_db = shelve.open(db_location+'propmotorcombodb')
     battery_db = shelve.open(db_location+'batterydb')
-    cut_material_db = shelve.open(db_location+'cuttingmaterialdb')
     print_material_db = shelve.open(db_location+'printingmaterialdb')
 
     # This is a "full factorial" search for possible alternatives. If the number of components available becomes large
     # this method of searching may need to be revised. My logic here saves all alternatives in the 'alternatives' list.
-    # If the alternative is feasible, the Quadrotor.feasible attribute will be equal to the boolean value True (the 
-    # default value of the attribute). If it is not feasible the Quadrotor.feasible attribute will be a string telling 
-    # the first reason the algorithm found for rejecting the alternative. By saving all alternatives in one list they 
-    # will be easy to pass back to the main gui for display or for statistical purposes. If the list of alternatives 
-    # becomes very large a list may take up too much memory. In this case other data structures should be used to hold 
+    # If the alternative is feasible, the Quadrotor.feasible attribute will be equal to the boolean value True (the
+    # default value of the attribute). If it is not feasible the Quadrotor.feasible attribute will be a string telling
+    # the first reason the algorithm found for rejecting the alternative. By saving all alternatives in one list they
+    # will be easy to pass back to the main gui for display or for statistical purposes. If the list of alternatives
+    # becomes very large a list may take up too much memory. In this case other data structures should be used to hold
     # feasible or non-feasible alternatives.
     alternatives = []
-    selected_pmaterials = constraints[-1]
+    selected_pmaterials = constraints[-2]
     # If the user has not selected any print materials, no alternatives are possible
     if not selected_pmaterials:
         return alternatives
@@ -59,9 +58,8 @@ def generate_alternatives(constraints):
 
     pmcombo_db.close()
     battery_db.close()
-    cut_material_db.close()
     print_material_db.close()
-    
+
     return alternatives
 
 
@@ -110,7 +108,7 @@ def is_feasible(quad_attrs, constraints):
         pmc_max_thrust, bat_voltage, bat_capacity, pmc_thrust_vec, pmc_current_vec = quad_attrs
 
     endurance_req, payload_req, max_weight, max_size, maneuverability, \
-        p_len, p_width, p_height, max_build_time, sensors, selected_pmaterials = constraints
+        p_len, p_width, p_height, max_build_time, sensors, selected_pmaterials, cover_flag = constraints
 
     # First estimate the vehicle size based on battery, prop, and motor. There are several constraints tested here.
     # 1) The maximum vehicle dimension must be less than the max_size constraint
@@ -119,45 +117,46 @@ def is_feasible(quad_attrs, constraints):
     # the printer is sufficiently large, which is a fair assumption since the arm is long and narrow. This also assumes
     # the printer height is sufficient.
 
-    # Call hublayout.hub_layout to size the hub for the chosen battery, sensors, and electronic component set (defined
-    # within hublayout.hub_layout). See hublayout module for more information on the hub sizing function and what
-    # hub_grid is. hub_layout returns the hub size in inches, the hub layer separation in inches, and the hub grid. Also
-    # see hublayout.hublayout_simple
-    try:
-        hub_size, hub_separation, hub_grid = hublayout.hub_layout([bat_xdim, bat_ydim, bat_zdim], sensors)
-    except hublayout.PlacementError as e:
-        print str(e)
-        return "Could not place sensors in/on hub.", 'N/A', None
+    # The following hub dimensions are from David Locascio's documentation on the new quad design
+    hub_xdim = 4.25
+    hub_ydim = 5.75
+    big_hub_dim = max(hub_xdim, hub_ydim)
 
     safe_factor = 1.15
     n_arms = 4
     prop_disc_separation_limited_len = safe_factor * (prop_dia/2/math.sin(math.pi/n_arms) + 0.75*motor_body_dia -
-                                                      0.5*hub_size)
+                                                      0.5*big_hub_dim)
     prop_to_hub_limited_len = safe_factor * \
         (prop_dia/2 + 1.5*motor_body_dia/2)
     arm_len = max(prop_disc_separation_limited_len, prop_to_hub_limited_len)
-    size = hub_size + 2*arm_len + prop_dia
+    size = math.sqrt(hub_xdim**2 + hub_ydim**2) + 2*arm_len + prop_dia  # This is an approximation
     if size > max_size:
         return "Max dimension too large.", size, None
-    if hub_size > min(p_len, p_width):
-        return "Hub too large for printer", hub_size, None
+    if big_hub_dim > min(p_len, p_width):
+        return "Hub too large for printer", big_hub_dim, None
     if arm_len > max(p_len, p_width):
         return "Arms too long for printer.", arm_len, None
 
-    n_layers = len(hub_grid)
-    hub_area = hub_size**2 * n_layers
-    hub_plate_thickness = 0.1   # Thickness of hub plate given in David's documentation
-    hub_weight = pmat_density / 12**3 * hub_plate_thickness * hub_area
-    hub_corner_len = hub_separation
+    # We want arm weight and hub weight now. These are calculated using weight/volume regressions as a function of
+    # propeller size.
+    prop_diameters = [5, 6, 7, 8, 9, 10, 11, 12]
+    arm_volumes = [0.74, 0.86, 1.02, 1.20, 1.38, 1.57, 1.81, 2.04]
+    base_plate_volumes = [2.29]*len(prop_diameters)
+    top_plate_volumes = [3.23, 3.13, 3.06, 2.94, 2.84, 2.75, 2.65, 2.56]
+    top_plate_cover_volumes = [4.58, 4.49, 4.39, 4.29, 4.20, 4.10, 4.00, 3.89]
 
-    # I (Nate Beals) have no idea where this equation comes from. I pulled it straight from the VBA code.
-    arm_vol_incube = (-0.59039*hub_separation**3) - (0.39684*arm_len*hub_corner_len**2) \
-        + (0.10027*hub_corner_len*arm_len**2) + (2.35465*hub_separation**2) \
-        + (2.06676*hub_corner_len**2) - (0.22142*arm_len*hub_corner_len) \
-        - (9.04469e-2*arm_len**2) - (2.1687*hub_separation) - (0.9074*hub_corner_len) \
-        + (0.92599*arm_len) - 0.99887
-    arm_vol_ftcube = arm_vol_incube / (12**3)
-    arm_weight = arm_vol_ftcube * pmat_density
+    arm_vol = interp(prop_diameters, arm_volumes, prop_dia)
+    base_plate_vol = interp(prop_diameters, base_plate_volumes, prop_dia)
+    top_plate_vol = interp(prop_diameters, top_plate_volumes, prop_dia)
+    top_plate_cover_vol = interp(prop_diameters, top_plate_cover_volumes, prop_dia)
+
+    if cover_flag:
+        hub_vol = base_plate_vol + top_plate_cover_vol
+    else:
+        hub_vol = base_plate_vol + top_plate_vol
+
+    arm_weight = arm_vol * pmat_density
+    hub_weight = hub_vol * pmat_density
 
     # The original authors give misc other weights for parts to go into the aggregate weight. Note: if the user wishes
     # to include sensors this weight should also be added.
@@ -198,12 +197,23 @@ def is_feasible(quad_attrs, constraints):
     if vehicle_endurance < endurance_req:
         return "Not enough endurance.", vehicle_endurance, None
 
-    # Calculate estimated build time using equation from original MASR tool (point of origin unknown), and
-    # compare to user requirement. Again, original equation in non-standard English units. Output of the build time
-    # equation is hours.
-    build_time = (-1.68036*arm_len*hub_separation**2 + 10.49405*hub_separation**2 +
-                  4.85943*arm_len*hub_separation + 0.48171*arm_len*hub_corner_len -
-                  29.25380*hub_separation - 2.59574*hub_corner_len - 3.27393*arm_len + 22.59885) * n_arms
+    # Now calculate the estimated build time based on a regression of experimentally measured times (as a function of
+    # propeller diameter).
+    arm_times = [2.50, 2.66, 2.93, 3.22, 3.50, 3.83, 4.17, 4.38]
+    base_plate_times = [1.63] * len(prop_diameters)
+    top_plate_times = [3.15, 3.03, 2.90, 2.78, 2.67, 2.55, 2.43, 2.30]
+    top_plate_cover_times = [4.72, 4.63, 4.53, 4.43, 4.35, 4.25, 4.13, 4.02]
+
+    arm_time = interp(prop_diameters, arm_times, prop_dia)
+    base_plate_time = interp(prop_diameters, base_plate_times, prop_dia)
+    top_plate_time = interp(prop_diameters, top_plate_times, prop_dia)
+    top_plate_cover_time = interp(prop_diameters, top_plate_cover_times, prop_dia)
+
+    if cover_flag:
+        build_time = arm_time*4 + base_plate_time + top_plate_cover_time
+    else:
+        build_time = arm_time*4 + base_plate_time + top_plate_time
+
     if build_time > max_build_time:
         return "Takes too long to build.", build_time, None
 
@@ -211,11 +221,11 @@ def is_feasible(quad_attrs, constraints):
     size = convert_unit(size, 'in', 'm')
     vehicle_weight = convert_unit(vehicle_weight, 'lbf', 'N')
     payload_capacity = convert_unit(payload_capacity, 'lbf', 'N')
-    hub_size = convert_unit(hub_size, 'in', 'm')
-    hub_separation = convert_unit(hub_separation, 'in', 'm')
+    hub_xdim = convert_unit(hub_xdim, 'in', 'm')
+    hub_ydim = convert_unit(hub_ydim, 'in', 'm')
     arm_len = convert_unit(arm_len, 'in', 'm')
     vehicle_performance = [vehicle_weight, payload_capacity, vehicle_endurance, size, build_time]
-    vehicle_geometry = [hub_size, hub_separation, hub_grid, arm_len, hub_corner_len]
+    vehicle_geometry = [hub_xdim, hub_ydim, arm_len]
     return 'true', vehicle_performance, vehicle_geometry
 
 
@@ -234,11 +244,18 @@ def interp(x, y, xint):
     function is used instead of a potentially more efficient implementation using scipy because 1) the application will
     be more portable without dependencies and 2) the data is basically linear so only this simple method is required.
     """
+
+    # Put this in so that the function accepts integer and float single values
+    if not isinstance(y, list):
+        y = [y]
+    if not isinstance(x, list):
+        x = [x]
+
     if not min(x) <= xint <= max(x):
-        raise ValueError("Insufficient P/M Combo Data")
+        raise ValueError("Insufficient Data")
 
     if xint in x:
-        yint = y[x.index[xint]]
+        yint = y[x.index(xint)]
         return yint
 
     for i, xp in enumerate(x):
@@ -339,66 +356,3 @@ def score_alternatives(alternatives, weightings):
     for i, quad in enumerate(alternatives):
         quad.score = closeness[i]
     return alternatives
-
-
-# def score_alternatives_old(alternatives, weightings):
-#     """
-#     This function takes in a list of feasible alternatives, scores the alternatives based on user-specified importance
-#     weightings, sets the Quadrotor.score attribute accordingly. The list of feasible alternatives is then returned.
-#
-#     The weightings input is a dictionary of the form:
-#         weightings = {'perf_attr1': [perf_attr1_weight, 'high'], 'perf_attr2': [perf_attr2_weight, 'low'], ... }
-#     where the 'high' and 'low' tell whether or not a high value of the attr is desirable or vice versa.
-#
-#     This function is called from oo_quad_GUI.AlternativesFrame.find_alternatives
-#     """
-#     # First we need to normalize the weighting values
-#     wgt_vals = [float(val[0]) for val in weightings.values()]
-#     wgt_sum = sum(wgt_vals)
-#     norm_wgt_vals = [wgt/wgt_sum for wgt in wgt_vals]
-#
-#     # This weighting method takes the weightings selected by the user and uses them to calculate an alternative's
-#     # "distance" from a positive and negative ideal score for a particular performance category which are equal to the
-#     # best and worst score among alternatives. The 'high'/'low' option in the weightings dictionary tells whether a
-#     # numerically high score corresponds to the positive ideal (== 'high') or a numerically low score is more desirable
-#     # (== 'low'). After these "distances" are calculated for all performance categories they are used to calculate the
-#     # total alternative score, given by the "relative closeness" to the positive ideal.
-#     total_d_pos = [0] * len(alternatives)
-#     total_d_neg = [0] * len(alternatives)
-#     i = 0
-#     for perf_attr in weightings:
-#         weight = norm_wgt_vals[i]
-#         # Find maximum attribute value among all alternatives
-#         try:
-#             max_val = max(getattr(quad, perf_attr)['value'] for quad in alternatives)
-#         except TypeError:
-#             max_val = max(getattr(quad, perf_attr) for quad in alternatives)
-#         attr_scores = []
-#         # Normalize all alternative attribute values using maximum value
-#         for quad in alternatives:
-#             try:
-#                 quad_attr_norm = getattr(quad, perf_attr)['value'] / max_val
-#             except TypeError:
-#                 quad_attr_norm = getattr(quad, perf_attr) / max_val
-#             attr_scores.append(quad_attr_norm)
-#         # Define the positive and negative ideal scores among alternatives
-#         if weightings[perf_attr][1] == 'high':
-#             pos_ideal = max(attr_scores)
-#             neg_ideal = min(attr_scores)
-#         else:
-#             pos_ideal = min(attr_scores)
-#             neg_ideal = max(attr_scores)
-#         d_pos = [weight*abs(pos_ideal-val) for val in attr_scores]
-#         d_neg = [weight*abs(neg_ideal-val) for val in attr_scores]
-#         total_d_pos = map(add, total_d_pos, d_pos)
-#         total_d_neg = map(add, total_d_neg, d_neg)
-#         i += 1
-#
-#     rel_closeness = map(lambda x, y: float(y)/(x+y), total_d_pos, total_d_neg)
-#
-#     i = 0
-#     for quad in alternatives:
-#         quad.score = rel_closeness[i]
-#         i += 1
-#
-#     return alternatives

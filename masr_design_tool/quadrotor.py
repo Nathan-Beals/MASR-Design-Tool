@@ -23,7 +23,7 @@ class Quadrotor(Vehicle):
     # list using a tuple of the format ('Pretty name', 'attribute real name', unit list (if applicable))
     export_info = part_attrs + Vehicle.perf_attrs_export + geometry_attrs
 
-    def __init__(self, pmcombo, battery, pmaterial, cmaterial, geometry=None, feasible=True, score=0, pareto=False):
+    def __init__(self, pmcombo, battery, pmaterial, geometry=None, feasible=True, score=0, pareto=False):
         """
 
         The input "feasible" will be true by default. If the quad is found to be infeasible the value will be changed
@@ -36,16 +36,15 @@ class Quadrotor(Vehicle):
         Vehicle.__init__(self)
 
         if geometry is None:
-            geometry = [0] * 5
+            geometry = [0] * 3
 
-        self.hub_size, self.hub_separation, self.hub_grid, self.arm_len, self.hub_corner_len = geometry
+        self.hub_xdim, self.hub_ydim, self.arm_len = geometry
 
         self.pmcombo = pmcombo
         self.prop = self.pmcombo.prop
         self.motor = self.pmcombo.motor
         self.battery = battery
         self.pmaterial = pmaterial
-        self.cmaterial = cmaterial
         self.feasible = feasible
         self.score = score
         self.pareto = pareto
@@ -60,12 +59,10 @@ class Quadrotor(Vehicle):
         specifically when the vehicle object has been determined to be feasible and geometry values have been
         calculated.
         """
-        hub_size, hub_separation, hub_grid, arm_len, hub_corner_len = geometry
-        self.hub_size = {'value': hub_size, 'unit': 'm'}
-        self.hub_separation = {'value': hub_separation, 'unit': 'm'}
-        self.hub_grid = hub_grid
+        hub_xdim, hub_ydim, arm_len = geometry
+        self.hub_xdim = {'value': hub_xdim, 'unit': 'm'}
+        self.hub_ydim = {'value': hub_ydim, 'unit': 'm'}
         self.arm_len = {'value': arm_len, 'unit': 'm'}
-        self.hub_corner_len = {'value': hub_corner_len, 'unit': 'm'}
 
     def display_frame(self, master, header=False, mode='regular', return_widgets=False):
         """
