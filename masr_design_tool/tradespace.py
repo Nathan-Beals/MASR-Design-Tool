@@ -82,6 +82,7 @@ class Tradespace(Toplevel):
 
 
 class EnvelopePlot(ttk.Frame):
+
     def __init__(self, master):
         ttk.Frame.__init__(self, master, padding=5)
         self.master = master
