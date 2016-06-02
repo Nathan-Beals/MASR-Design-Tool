@@ -7,7 +7,7 @@ import win32com.client
 import pythoncom
 import datetime
 
-from unitconversion import convert_unit
+from masr_design_tool.tools import convert_unit
 
 
 def build_model(quad):

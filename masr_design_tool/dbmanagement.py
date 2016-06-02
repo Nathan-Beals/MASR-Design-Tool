@@ -5,7 +5,7 @@ except ImportError:
 import ttk
 from collections import OrderedDict
 import shelve
-import unitconversion
+import tools
 from winplace import get_win_place
 import dblocation
 
@@ -412,7 +412,7 @@ class AddObjectWindow(Toplevel):
                 self.indicator_var.set("Object added successfully.")
         except IOError:
             self.indicator_var.set("Could not add object.")
-        except unitconversion.ConversionError as e:
+        except tools.ConversionError as e:
             self.indicator_var.set(str(e))
         except ValueError as e:
             self.indicator_var.set(str(e))
@@ -591,7 +591,7 @@ class AddEditPMComboWindow(Toplevel):
                 self.indicator_var.set("Object added successfully.")
         except IOError:
             self.indicator_var.set("Could not add object.")
-        except unitconversion.ConversionError as e:
+        except tools.ConversionError as e:
             self.indicator_var.set(str(e))
         except ValueError as e:
             self.indicator_var.set(str(e))

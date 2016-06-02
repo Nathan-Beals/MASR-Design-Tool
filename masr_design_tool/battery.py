@@ -1,6 +1,6 @@
 from displayable import Displayable
 from collections import OrderedDict
-from unitconversion import convert_unit, CapacityConvError
+from tools import convert_unit, CapacityConvError
 try:
     from Tkinter import *
 except ImportError:

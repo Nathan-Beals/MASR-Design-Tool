@@ -1,9 +1,6 @@
 import shelve
-import math
-from scipy.interpolate import interp1d
 from operator import add
-from unitconversion import convert_unit
-from quadrotor import Quadrotor
+
 import dblocation
 
 db_location = dblocation.db_location
@@ -25,6 +22,7 @@ def generate_alternatives(constraints):
     pmcombo_db = shelve.open(db_location+'propmotorcombodb')
     battery_db = shelve.open(db_location+'batterydb')
     print_material_db = shelve.open(db_location+'printingmaterialdb')
+    platforms = ['Quadmultipiece', 'Quadonepiece']
 
     # This is a "full factorial" search for possible alternatives. If the number of components available becomes large
     # this method of searching may need to be revised. My logic here saves all alternatives in the 'alternatives' list.
@@ -45,226 +43,22 @@ def generate_alternatives(constraints):
                      if abs(float(bat.voltage['value'])-float(pmcombo.test_bat_volt_rating['value'])) < 0.1]
         for battery in good_bats:
             for pmaterial in selected_pmaterials:
-                    this_quad = Quadrotor(pmcombo, battery, pmaterial)
-                    quad_attrs = unit_wrapper(this_quad)
-                    feasibility, performance, geometry = is_feasible(quad_attrs, constraints)
+                for platform in platforms:
+                    this_vehicle = getattr(__import__(platform.lower()), platform)(pmcombo, battery, pmaterial)
+                    feasibility, performance, geometry = this_vehicle.is_feasible(constraints)
                     if feasibility != 'true':
                         #   If not feasible return reason for fail and % off from requirement
-                        this_quad.feasible = (feasibility, performance)
+                        this_vehicle.feasible = (feasibility, performance)
                     else:
-                        this_quad.set_performance(performance)
-                        this_quad.set_geometry(geometry)
-                    alternatives.append(this_quad)
+                        this_vehicle.set_performance(performance)
+                        this_vehicle.set_geometry(geometry)
+                    alternatives.append(this_vehicle)
 
     pmcombo_db.close()
     battery_db.close()
     print_material_db.close()
 
     return alternatives
-
-
-def unit_wrapper(quad):
-    """
-    This function takes a quadrotor object as input (from the generate_alternatives() function) and converts the
-    attribute quantities that will be needed in the is_feasible() function to English units. This is done because the
-    performance and sizing equations given in the original GT tool are in English units. Without re-deriving all of them
-    without any documentation it is necessary to do the calculations in English units and convert the results back to
-    metric. Not very elegant, but for now it will have to do.
-    """
-    this_quad = quad
-    bat_xdim = convert_unit(this_quad.battery.xdim['value'], this_quad.battery.xdim['unit'], 'in')
-    bat_ydim = convert_unit(this_quad.battery.ydim['value'], this_quad.battery.ydim['unit'], 'in')
-    bat_zdim = convert_unit(this_quad.battery.zdim['value'], this_quad.battery.zdim['unit'], 'in')
-    prop_dia = convert_unit(this_quad.prop.diameter['value'], this_quad.prop.diameter['unit'], 'in')
-    motor_body_dia = convert_unit(this_quad.motor.body_diameter['value'], this_quad.motor.body_diameter['unit'], 'in')
-    pmat_density = convert_unit(this_quad.pmaterial.density['value'], this_quad.pmaterial.density['unit'], 'lbf*ft^-3')
-    bat_weight = convert_unit(this_quad.battery.weight['value'], this_quad.battery.weight['unit'], 'lbf')
-    motor_weight = convert_unit(this_quad.motor.weight['value'], this_quad.motor.weight['unit'], 'lbf')
-    prop_weight = convert_unit(this_quad.prop.weight['value'], this_quad.prop.weight['unit'], 'lbf')
-    pmc_max_thrust = convert_unit(this_quad.pmcombo.max_thrust['value'], this_quad.pmcombo.max_thrust['unit'], 'lbf')
-    bat_voltage = this_quad.battery.voltage['value']
-    bat_capacity = convert_unit(this_quad.battery.capacity['value'], this_quad.battery.capacity['unit'], 'mAh',
-                                this_quad.battery.voltage['value'])
-    pmc_thrust_vec = [convert_unit(val, 'N', 'lbf') for val in this_quad.pmcombo.thrust_vec['value']]
-    pmc_current_vec = this_quad.pmcombo.current_vec['value']
-
-    quad_attrs = [bat_xdim, bat_ydim, bat_zdim, prop_dia, motor_body_dia, pmat_density,
-                  bat_weight, motor_weight, prop_weight, pmc_max_thrust, bat_voltage, bat_capacity, pmc_thrust_vec,
-                  pmc_current_vec]
-    return quad_attrs
-
-
-def is_feasible(quad_attrs, constraints):
-    """
-    Checks if a quadrotor alternative (described by its attributes passed in using the quad_attrs variable) is feasible
-    considering the constraints given by the user by calculating some vehicle sizing and performance metrics.
-
-    Returns ('true', vehicle_performance), where vehicle  performance is a list of metrics, if alternative is feasible.
-    Returns (rejection reason, rejected value), where rejection reason is a string, if alternative is not
-    feasible.
-    """
-
-    bat_xdim, bat_ydim, bat_zdim, prop_dia, motor_body_dia, pmat_density, bat_weight, motor_weight, prop_weight, \
-        pmc_max_thrust, bat_voltage, bat_capacity, pmc_thrust_vec, pmc_current_vec = quad_attrs
-
-    endurance_req, payload_req, max_weight, max_size, maneuverability, \
-        p_len, p_width, p_height, max_build_time, sensors, selected_pmaterials, cover_flag = constraints
-
-    # First estimate the vehicle size based on battery, prop, and motor. There are several constraints tested here.
-    # 1) The maximum vehicle dimension must be less than the max_size constraint
-    # 2) The dimension of the hub must be less than min(cutter_len, cutter_width)
-    # 3) The length of the arm must be less than max(printer_len, printer_width). This assumes the other dimension of
-    # the printer is sufficiently large, which is a fair assumption since the arm is long and narrow. This also assumes
-    # the printer height is sufficient.
-
-    # The following hub dimensions are from David Locascio's documentation on the new quad design
-    hub_xdim = 4.25
-    hub_ydim = 5.75
-    big_hub_dim = max(hub_xdim, hub_ydim)
-
-    safe_factor = 1.15
-    n_arms = 4
-    prop_disc_separation_limited_len = safe_factor * (prop_dia/2/math.sin(math.pi/n_arms) + 0.75*motor_body_dia -
-                                                      0.5*big_hub_dim)
-    prop_to_hub_limited_len = safe_factor * \
-        (prop_dia/2 + 1.5*motor_body_dia/2)
-    arm_len = max(prop_disc_separation_limited_len, prop_to_hub_limited_len)
-    size = math.sqrt(hub_xdim**2 + hub_ydim**2) + 2*arm_len + prop_dia  # This is an approximation
-    if size > max_size:
-        return "Max dimension too large.", size, None
-    if big_hub_dim > min(p_len, p_width):
-        return "Hub too large for printer", big_hub_dim, None
-    if arm_len > max(p_len, p_width):
-        return "Arms too long for printer.", arm_len, None
-
-    # We want arm weight and hub weight now. These are calculated using weight/volume regressions as a function of
-    # propeller size.
-    prop_diameters = [5, 6, 7, 8, 9, 10, 11, 12]
-    arm_volumes = [0.74, 0.86, 1.02, 1.20, 1.38, 1.57, 1.81, 2.04]
-    base_plate_volumes = [2.29]*len(prop_diameters)
-    top_plate_volumes = [3.23, 3.13, 3.06, 2.94, 2.84, 2.75, 2.65, 2.56]
-    top_plate_cover_volumes = [4.58, 4.49, 4.39, 4.29, 4.20, 4.10, 4.00, 3.89]
-
-    arm_vol = interp(prop_diameters, arm_volumes, prop_dia)
-    base_plate_vol = interp(prop_diameters, base_plate_volumes, prop_dia)
-    top_plate_vol = interp(prop_diameters, top_plate_volumes, prop_dia)
-    top_plate_cover_vol = interp(prop_diameters, top_plate_cover_volumes, prop_dia)
-
-    if cover_flag:
-        hub_vol = base_plate_vol + top_plate_cover_vol
-    else:
-        hub_vol = base_plate_vol + top_plate_vol
-
-    arm_weight = arm_vol * pmat_density
-    hub_weight = hub_vol * pmat_density
-
-    # The original authors give misc other weights for parts to go into the aggregate weight. Note: if the user wishes
-    # to include sensors this weight should also be added.
-    sensors_weight = convert_unit(sum(s.weight['value'] for s in sensors), 'N', 'lbf')
-    wire_weight = 0.000612394 * arm_len * n_arms
-    esc_weight = 0.2524
-    apm_weight = 0.0705479
-    compass_weight = 0.06062712
-    receiver_weight = 0.033069
-    propnut_weight = 0.0251327
-    weights = [arm_weight*n_arms, compass_weight, receiver_weight, apm_weight, wire_weight, esc_weight, propnut_weight]
-    weights += [hub_weight, bat_weight, motor_weight*n_arms, prop_weight*n_arms, sensors_weight]
-    vehicle_weight = sum(weights)
-    if vehicle_weight > max_weight:
-        return "Too heavy.", vehicle_weight, None
-
-    # Now estimate the thrust required for the vehicle based on the maneuverability requested by the user and the
-    # weight that was just calculated. The original MASR Excel tool uses a table lookup to find the thrust margin
-    # coefficient, but since there are only 3 options to choose from (Normal, High, Acrobatic), it makes more sense to
-    # simply assign these three values without bothering looking them up in a table. If additional maneuverability
-    # fidelity is desired it may be good to use the table lookup.
-    thrust_margin_coef = [1.29, 1.66, 2.09][['Normal', 'High', 'Acrobatic'].index(maneuverability)]
-    thrust_available = n_arms * pmc_max_thrust
-    payload_capacity = (thrust_available / thrust_margin_coef) - vehicle_weight
-    if payload_capacity < payload_req:
-        return "Not enough payload capacity.", payload_capacity, None
-
-    # Next, determine the estimated vehicle endurance and compare to the endurance required by the user. For this step
-    # the average current draw needs to be interpolated from the propeller/motor combo current vs. thrust data using
-    # the average thrust as the interpolation point of interest. The equation for average thrust given below assumes
-    # that the mission consists only of hovering. This could be replaced with a real mission model result.
-    avg_thrust = 1.125 * (vehicle_weight + payload_req) / n_arms
-    try:
-        avg_current = interp(pmc_thrust_vec, pmc_current_vec, avg_thrust)
-    except ValueError as e:
-        return str(e)
-    vehicle_endurance = bat_capacity / (n_arms * avg_current * 1000) * 60
-    if vehicle_endurance < endurance_req:
-        return "Not enough endurance.", vehicle_endurance, None
-
-    # Now calculate the estimated build time based on a regression of experimentally measured times (as a function of
-    # propeller diameter).
-    arm_times = [2.50, 2.66, 2.93, 3.22, 3.50, 3.83, 4.17, 4.38]
-    base_plate_times = [1.63] * len(prop_diameters)
-    top_plate_times = [3.15, 3.03, 2.90, 2.78, 2.67, 2.55, 2.43, 2.30]
-    top_plate_cover_times = [4.72, 4.63, 4.53, 4.43, 4.35, 4.25, 4.13, 4.02]
-
-    arm_time = interp(prop_diameters, arm_times, prop_dia)
-    base_plate_time = interp(prop_diameters, base_plate_times, prop_dia)
-    top_plate_time = interp(prop_diameters, top_plate_times, prop_dia)
-    top_plate_cover_time = interp(prop_diameters, top_plate_cover_times, prop_dia)
-
-    if cover_flag:
-        build_time = arm_time*4 + base_plate_time + top_plate_cover_time
-    else:
-        build_time = arm_time*4 + base_plate_time + top_plate_time
-
-    if build_time > max_build_time:
-        return "Takes too long to build.", build_time, None
-
-    # Since the alternative isn't infeasible by this point, it must be feasible. First convert some stuff back to metric
-    size = convert_unit(size, 'in', 'm')
-    vehicle_weight = convert_unit(vehicle_weight, 'lbf', 'N')
-    payload_capacity = convert_unit(payload_capacity, 'lbf', 'N')
-    hub_xdim = convert_unit(hub_xdim, 'in', 'm')
-    hub_ydim = convert_unit(hub_ydim, 'in', 'm')
-    arm_len = convert_unit(arm_len, 'in', 'm')
-    vehicle_performance = [vehicle_weight, payload_capacity, vehicle_endurance, size, build_time]
-    vehicle_geometry = [hub_xdim, hub_ydim, arm_len]
-    return 'true', vehicle_performance, vehicle_geometry
-
-
-def interp(x, y, xint):
-    """
-    Uses linear interpolation of the datasets x and y to find the value yint corresponding to a value xint. In this
-    case x is the thrust array, y is the current array, and xint is the average thrust required.
-
-    xint must satisfy min(x) <= xint <= max(x)
-
-    x and y arrays must be of equal length. This should be pre-enforced when the pmcombo object was created.
-
-    Linear interpolation should be sufficient for the problem of finding the average current draw given the average
-    thrust required if the thrust since this plot is roughly linear for the datasets currently available. Of course the
-    approximation gets worse with the second derivative of the true relationship between current and thrust. This
-    function is used instead of a potentially more efficient implementation using scipy because 1) the application will
-    be more portable without dependencies and 2) the data is basically linear so only this simple method is required.
-    """
-
-    # Put this in so that the function accepts integer and float single values
-    if not isinstance(y, list):
-        y = [y]
-    if not isinstance(x, list):
-        x = [x]
-
-    if not min(x) <= xint <= max(x):
-        raise ValueError("Insufficient Data")
-
-    if xint in x:
-        yint = y[x.index(xint)]
-        return yint
-
-    for i, xp in enumerate(x):
-        if xint < xp:
-            p2 = (xp, y[i])
-            p1 = (x[i-1], y[i-1])
-            slope = (p2[1]-p1[1])/(p2[0]-p1[0])
-            yint = slope*(xint-p1[0]) + p1[1]
-            return yint
 
 
 def score_alternatives(alternatives, weightings):

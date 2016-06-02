@@ -4,7 +4,7 @@ try:
 except ImportError:
     from tkinter import *
 import ttk
-from unitconversion import convert_unit
+from tools import convert_unit
 
 
 class Displayable(object):

@@ -69,3 +69,51 @@ def convert_unit(val, unit_start, unit_end, voltage=None):
         except KeyError:
             print "End unit not found: stu=%s eu=%s" % (unit_start, unit_end)
             raise
+
+
+def interp(x, y, xint):
+    """
+    Uses linear interpolation of the datasets x and y to find the value yint corresponding to a value xint. In this
+    case x is the thrust array, y is the current array, and xint is the average thrust required.
+
+    xint must satisfy min(x) <= xint <= max(x)
+
+    x and y arrays must be of equal length. This should be pre-enforced when the pmcombo object was created.
+
+    Linear interpolation should be sufficient for the problem of finding the average current draw given the average
+    thrust required if the thrust since this plot is roughly linear for the datasets currently available. Of course the
+    approximation gets worse with the second derivative of the true relationship between current and thrust. This
+    function is used instead of a potentially more efficient implementation using scipy because 1) the application will
+    be more portable without dependencies and 2) the data is basically linear so only this simple method is required.
+    """
+
+    # Put this in so that the function accepts integer and float single values
+    if not isinstance(y, list):
+        y = [y]
+    if not isinstance(x, list):
+        x = [x]
+
+    if not min(x) <= xint <= max(x) and not any(float_is_close(xint, xval) for xval in [min(x), max(x)]):
+        print x
+        print xint
+        raise ValueError("Insufficient Data")
+
+    for i, xval in enumerate(x):
+        if float_is_close(xval, xint):
+            yint = y[i]
+            return yint
+
+    for i, xp in enumerate(x):
+        if xint < xp:
+            p2 = (xp, y[i])
+            p1 = (x[i-1], y[i-1])
+            slope = (p2[1]-p1[1])/(p2[0]-p1[0])
+            yint = slope*(xint-p1[0]) + p1[1]
+            return yint
+
+
+def float_is_close(f1, f2, rel_tol=1e-09, abs_tol=0.000001):
+        """
+        Floating point "equals" function
+        """
+        return abs(f1-f2) <= max(rel_tol*max(abs(f1), abs(f2)), abs_tol)

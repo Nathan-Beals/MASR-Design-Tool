@@ -16,7 +16,7 @@ class Vehicle(Displayable):
 
     perf_attrs_export = zip(perf_attr_dict.keys(), perf_attr_names, perf_attr_dict.values())
 
-    def __init__(self, performance=None):
+    def __init__(self, type, performance=None):
         Displayable.__init__(self)
 
         if performance is None:
@@ -29,6 +29,7 @@ class Vehicle(Displayable):
         self.max_endurance = max_endurance
         self.max_dimension = max_dimension
         self.build_time = build_time
+        self.type = type
 
     def set_performance(self, performance):
         """

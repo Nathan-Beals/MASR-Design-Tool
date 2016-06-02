@@ -5,7 +5,7 @@ except ImportError:
 import ttk
 from winplace import get_win_place
 from vehicle import Vehicle
-from unitconversion import convert_unit
+from tools import convert_unit
 import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')

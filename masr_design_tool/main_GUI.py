@@ -1,27 +1,25 @@
 #! /usr/bin/env python
 
-import logging
-import traceback
-import tkMessageBox
 try:
     from Tkinter import *
 except ImportError:
     from tkinter import *
-import ttk
-import tkFont
-import tkFileDialog
 import csv
+import os
 import shelve
+import sys
+import tkFileDialog
+import tkFont
+import ttk
 from collections import OrderedDict
+
+import alternatives_new
+import dblocation
 import dbmanagement
 import export
-import alternatives_new
 import tradespace
+from tools import convert_unit
 from winplace import get_win_place
-from unitconversion import convert_unit
-import dblocation
-import sys
-import os
 
 db_location = dblocation.db_location
 
@@ -812,16 +810,16 @@ class AlternativesFrame(ttk.Frame):
 
         endurance_req = float(self.master.vehicle_req_frame.endurance_var.get())   # Endurance in minutes
         payload_req = float(self.master.vehicle_req_frame.payload_var.get())
-        payload_req = convert_unit(payload_req, self.master.vehicle_req_frame.payload_unit_cb.get(), 'lbf')
+        payload_req = convert_unit(payload_req, self.master.vehicle_req_frame.payload_unit_cb.get(), 'N')
         max_weight = float(self.master.vehicle_req_frame.max_weight_var.get())
-        max_weight = convert_unit(max_weight, self.master.vehicle_req_frame.max_weight_unit_cb.get(), 'lbf')
+        max_weight = convert_unit(max_weight, self.master.vehicle_req_frame.max_weight_unit_cb.get(), 'N')
         max_size = float(self.master.vehicle_req_frame.max_size_var.get())
-        max_size = convert_unit(max_size, self.master.vehicle_req_frame.max_size_unit_cb.get(), 'in')
+        max_size = convert_unit(max_size, self.master.vehicle_req_frame.max_size_unit_cb.get(), 'm')
         maneuverability = str(self.master.vehicle_req_frame.maneuver_var.get())
         cover_flag = self.master.vehicle_req_frame.cover_checkvar.get()
-        p_len = convert_unit(selected_printer.length['value'], selected_printer.length['unit'], 'in')
-        p_width = convert_unit(selected_printer.width['value'], selected_printer.width['unit'], 'in')
-        p_height = convert_unit(selected_printer.height['value'], selected_printer.height['unit'], 'in')
+        p_len = convert_unit(selected_printer.length['value'], selected_printer.length['unit'], 'm')
+        p_width = convert_unit(selected_printer.width['value'], selected_printer.width['unit'], 'm')
+        p_height = convert_unit(selected_printer.height['value'], selected_printer.height['unit'], 'm')
         # c_len = convert_unit(selected_cutter.length['value'], selected_cutter.length['unit'], 'in')
         # c_width = convert_unit(selected_cutter.width['value'], selected_cutter.width['unit'], 'in')
         max_build_time = float(self.master.manuf_req_frame.build_time_var.get())   # Build time in hours
@@ -993,13 +991,13 @@ class AlternativesSheet(ttk.Frame):
             widget.destroy()
 
         row = 0
-        for quad in self.master.master.master.f_alternatives:
+        for alternative in self.master.master.master.f_alternatives:
             if row != 0:
-                quad_frame = quad.display_frame(self)
-                quad_frame.grid(column=1, row=row)
+                alt_frame = alternative.display_frame(self)
+                alt_frame.grid(column=1, row=row)
             else:
-                quad_frame = quad.display_frame(self, header=True)
-                quad_frame.grid(column=1, row=row, rowspan=2)
+                alt_frame = alternative.display_frame(self, header=True)
+                alt_frame.grid(column=1, row=row, rowspan=2)
                 row += 1
             radiobutton = ttk.Radiobutton(self, variable=self.current_object_selection,
                                           value=len(self.radiobutton_list))
@@ -1021,10 +1019,11 @@ class ViewQuadDetails(Toplevel):
         self.geometry('+%d+%d' % (xpos, ypos))
         self.mainframe = ttk.Frame(self)
         self.mainframe.pack(fill=BOTH, expand=YES)
+        self.title("Alternative Details")
 
         # Create title label
-        self.title = ttk.Label(self.mainframe, text='Quadrotor Details', font='-weight bold')
-        self.title.pack(pady='15 5')
+        # self.title = ttk.Label(self.mainframe, text='Quadrotor Details', font='-weight bold')
+        # self.title.pack(pady='15 5')
 
         # Create subframes and close button
         self.perf_frame = ttk.Frame(self.mainframe, borderwidth=2, relief=RIDGE, padding='5 15 5 10')
