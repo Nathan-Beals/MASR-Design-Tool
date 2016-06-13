@@ -2,3 +2,4 @@
 .pyc
 .egg_info
 /masr_design_tool/.pyc
+*.pyc
