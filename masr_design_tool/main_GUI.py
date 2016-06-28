@@ -843,6 +843,7 @@ class AlternativesFrame(ttk.Frame):
             return
         quad_selected_indx = self.alt_view_frame.interior.current_object_selection.get()
         selected_quad = self.f_alternatives[quad_selected_indx]
+        print self.master.vehicle_req_frame.cover_checkvar.get()
         ViewQuadDetails(self, selected_quad)
 
     def build_model(self):
@@ -851,8 +852,8 @@ class AlternativesFrame(ttk.Frame):
         quad_selected_indx = self.alt_view_frame.interior.current_object_selection.get()
         selected_quad = self.f_alternatives[quad_selected_indx]
         try:
-            import sw14
-            sw14.build_model(selected_quad)
+            import buildmodel
+            buildmodel.build_model(selected_quad,self.master.vehicle_req_frame.cover_checkvar.get())
         except ImportError:
             self.alt_infovar.set("Required modules not installed for export.")
             return

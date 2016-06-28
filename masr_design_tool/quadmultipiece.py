@@ -98,11 +98,13 @@ class Quadmultipiece(Vehicle):
 
         safe_factor = 1.15
         n_arms = 4
-        prop_disc_separation_limited_len = safe_factor * (prop_dia/2/math.sin(math.pi/n_arms) + 0.75*motor_body_dia -
-                                                          0.5*big_hub_dim)
-        prop_to_hub_limited_len = safe_factor * \
-            (prop_dia/2 + 1.5*motor_body_dia/2)
-        arm_len = max(prop_disc_separation_limited_len, prop_to_hub_limited_len)
+#         prop_disc_separation_limited_len = safe_factor * (prop_dia/2/math.sin(math.pi/n_arms) + 0.75*motor_body_dia -
+#                                                          0.5*big_hub_dim)
+#        prop_to_hub_limited_len = safe_factor * \
+#            (prop_dia/2 + 1.5*motor_body_dia/2)
+#        arm_len = max(prop_disc_separation_limited_len, prop_to_hub_limited_len)
+        arm_len = prop_dia/2 + 2.25 # According to David Loccasio's Documentation, in inches
+        arm_len = convert_unit(arm_len, 'in', 'm')
         size = math.sqrt(hub_xdim**2 + hub_ydim**2) + 2*arm_len + prop_dia  # This is an approximation
         if size > max_size:
             return "Max dimension too large.", size, None
