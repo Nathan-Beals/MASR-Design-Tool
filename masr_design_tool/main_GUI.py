@@ -18,6 +18,7 @@ import dblocation
 import dbmanagement
 import export
 import tradespace
+import buildmodel
 from tools import convert_unit
 from winplace import get_win_place
 
@@ -108,6 +109,8 @@ class VehicleReqFrame(ttk.Frame):
         self.max_weight_label = ttk.Label(self.constraints_frame, text='Maximum Weight')
         self.max_weight_var = DoubleVar()
         self.max_weight_entry = ttk.Entry(self.constraints_frame, textvariable=self.max_weight_var, width=7)
+        self.max_weight_entry.delete(0, last=END)
+        self.max_weight_entry.insert(0, '1000.0')
         self.max_weight_unit_cb = ttk.Combobox(self.constraints_frame, state='readonly',
                                                values=('N', 'lbf', 'kg'), width=3)
         self.max_weight_unit_cb.current(0)
@@ -115,6 +118,8 @@ class VehicleReqFrame(ttk.Frame):
         self.max_size_label = ttk.Label(self.constraints_frame, text='Maximum Size')
         self.max_size_var = DoubleVar()
         self.max_size_entry = ttk.Entry(self.constraints_frame, textvariable=self.max_size_var, width=7)
+        self.max_size_entry.delete(0, last=END)
+        self.max_size_entry.insert(0, '1000.0')
         self.max_size_unit_cb = ttk.Combobox(self.constraints_frame, state='readonly',
                                              values=('m', 'cm', 'in'), width=3)
         self.max_size_unit_cb.current(0)
@@ -332,6 +337,8 @@ class ManufReqFrame(ttk.Frame):
         self.build_time_label = ttk.Label(self.build_time_frame, text='Allowable Build Time (hrs)')
         self.build_time_var = DoubleVar()
         self.build_time_entry = ttk.Entry(self.build_time_frame, textvariable=self.build_time_var, width=7)
+        self.build_time_entry.delete(0, last=END)
+        self.build_time_entry.insert(0, '100.0')
 
         self.manuf_req_title.pack(padx=12, pady=12)
         self.build_time_label.pack(side=LEFT, padx='5 2', pady='0 5')
@@ -378,6 +385,12 @@ class MaxBuildDimFrame(ttk.Frame):
         self.printer_combobox = ttk.Combobox(self, state='readonly', values=self.printername_list)
         self.printer_combobox.bind("<<ComboboxSelected>>", self.set_values)
         self.printer_combobox.current(0)
+        for name in self.printer_combobox['values']:
+                count=0
+                if name == "HugePrint":
+                    self.printer_combobox.current(count)
+                count =  count + 1
+            
 
         self.printer_len_label = ttk.Label(self, text='length')
         self.printer_len_entry = ttk.Entry(self, state='readonly', width=7)
@@ -611,8 +624,13 @@ class PrintingMaterialFrame(ttk.Frame):
         for pmat in pmat_db.values():
             checkvar = IntVar()
             check = ttk.Checkbutton(self.check_frame, text=pmat.name, variable=checkvar)
+            # for ease of debugging
+            if pmat.name == "Stratasys-FDM-Nylon12":
+                checkvar.set(1)
+            
             check.pack(pady=5, anchor=W)
             self.checkvar_list.append(checkvar)
+        
         pmat_db.close()
 
         self.check_frame.pack_forget()
@@ -852,8 +870,8 @@ class AlternativesFrame(ttk.Frame):
         quad_selected_indx = self.alt_view_frame.interior.current_object_selection.get()
         selected_quad = self.f_alternatives[quad_selected_indx]
         try:
-            import buildmodel
-            buildmodel.build_model(selected_quad,self.master.vehicle_req_frame.cover_checkvar.get())
+            import buildmodel 
+            buildmodel.build_model(selected_quad,self.master.vehicle_req_frame.cover_checkvar.get(),self.alt_infovar)
         except ImportError:
             self.alt_infovar.set("Required modules not installed for export.")
             return
