@@ -3,9 +3,9 @@
 "Plate Dim Y"= 5.75in
 "D2@Sketch1"="Propeller Size"
 "Plate Thickness"= 0.1in
-"Batt X"= 1.88976in
-"Batt Y"= 5.5118in
-"Batt Z"= 0.86614in
+"Batt X"= 1.25984in
+"Batt Y"= 4.01574in
+"Batt Z"= 0.62992in
 "Arm Length"= "Propeller Size" * .357 + 2.965
 "ESC Y"= 2.4in
 "ESC X"= 26mm
