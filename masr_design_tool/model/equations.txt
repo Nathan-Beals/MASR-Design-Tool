@@ -1,0 +1,36 @@
+"Propeller Size"= 10.0in
+"Plate Dim X"= 4.25in
+"Plate Dim Y"= 5.75in
+"D2@Sketch1"="Propeller Size"
+"Plate Thickness"= 0.1in
+"Batt X"= 1.88976in
+"Batt Y"= 5.5118in
+"Batt Z"= 0.86614in
+"Arm Length"= "Propeller Size" * .357 + 2.965
+"ESC Y"= 2.4in
+"ESC X"= 26mm
+"ESC Z"= 10.5mm
+"Component Y"= 1.64in
+"Dowell Height"= 0.1
+"Dowell Width"= 0.25
+"Motor Screw Y"= 25mm
+"Motor Screw X"= 19mm
+"Gimbal Mount"= 0
+"Payload Bot Z"= 0
+"Motor Screw Diam"= 3mm
+"GPS X"= 2
+"GPS Y"= 2
+"GPS Z"= 0.5
+"Flight Controller X"= 2
+"Flight Controller Y"= 3.25
+"Flight Controller Z"= 0.5
+"Radio Rx X"= 1.13
+"Radio Rx Y"= 2
+"Radio Rx Z"= 0.5
+"D1@Sketch1"="Propeller Size"/2+4
+"Cover"= 1
+"Top Plate-1.Part"= if ( "Cover" = 0 , "unsuppressed" , "suppressed" )
+"Top Plate Cover_new-1.Part"= if ( "Cover" = 1 , "unsuppressed" , "suppressed" )
+"Motor Diam"= 1.37in
+"Motor Length"= 23mm
+"Motor Shaft Diam"= 3mm
