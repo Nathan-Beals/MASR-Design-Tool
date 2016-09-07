@@ -25,40 +25,40 @@ def build_model(quad,cover_flag, alt_infovar):
     except ImportError:
         alt_infovar.set("pythoncom module not installed for export.")
         return
-    
+
     # Initialize an instance of SolidWorks 201X
     # swYearLastDigit = 4
-    # sw = win32com.client.Dispatch("SldWorks.Application.%d" % (20+(swYearLastDigit-2)))  
-    # If more than one version is installed, activate the two lines of code preceding this comment  
+    # sw = win32com.client.Dispatch("SldWorks.Application.%d" % (20+(swYearLastDigit-2)))
+    # If more than one version is installed, activate the two lines of code preceding this comment
     # This will fetch the existing version of Solidworks present on the system, if only single version is present
-    
+
      # Save a new folder
     now = datetime.datetime.now()
-    ModelDataDir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'modelOutput/' +
-                                                now.strftime("%Y-%m-%d_%H%M%S")))
+    ModelDataDir = os.path.join(os.path.dirname(__file__), 'modelOutput' +
+                                now.strftime("%Y-%m-%d_%H%M%S"))
     if not os.path.exists(ModelDataDir):
         os.makedirs(ModelDataDir)
-    
-    src_files = os.listdir(os.path.abspath(os.path.join('model/')))
-    
-    for file_name in src_files:
-            full_file_name = os.path.join(os.path.abspath(os.path.join('model/')), file_name)
+
+    model_path = os.path.join(os.path.dirname(__file__), 'model')
+
+    for file_name in os.listdir(model_path):
+            full_file_name = os.path.join(model_path, file_name)
             shutil.copy(full_file_name, ModelDataDir)
-    
+
     swApp = win32com.client.Dispatch("SldWorks.Application")
     swApp.Visible = True
-    
+
     # Open the multirotor model
     modelPath = os.path.abspath(os.path.join(ModelDataDir, 'Quad Assemb.SLDASM'))
     longstatus = win32com.client.VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, -1)
     longwarnings = win32com.client.VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, -1)
     swApp.OpenDoc6(modelPath, 2, 0, "", longstatus, longwarnings)
-    
+
     # Make the model the active model
     swApp.ActivateDoc2("Quad Assemb.SLDASM", False, longstatus)
     model = swApp.ActiveDoc
     eqMgr = model.GetEquationMgr
-    
+
 
     prop_dia = convert_unit(quad.prop.diameter['value'], 'm', 'in')
     plate_xdim = 4.25 # inches
@@ -69,14 +69,14 @@ def build_model(quad,cover_flag, alt_infovar):
     bat_zdim = convert_unit(quad.battery.zdim['value'], 'm', 'in')
     arm_length = convert_unit(quad.arm_len['value'], 'm', 'in')
     arm_len = prop_dia *0.357 + 2.965 # in inches, according to Solidworks equation manager
-    # esc_xdim = 
-    # esc_ydim = 
-    # esc_zdim = 
+    # esc_xdim =
+    # esc_ydim =
+    # esc_zdim =
     comp_y = 1.64 # inches
     dowell_height = 0.1 #inches
     dowell_width = 0.25 #inches
-    # motor_screw_ydim = 
-    # motor_screw_xdim = 
+    # motor_screw_ydim =
+    # motor_screw_xdim =
     gimbal_mount = 0
     payload_bot_z = 0
     # motor_screw_dia
@@ -92,13 +92,13 @@ def build_model(quad,cover_flag, alt_infovar):
     cover = cover_flag
     motor_dia = convert_unit(quad.motor.body_diameter['value'], 'm', 'in')
     # motor_len =
-    # motor_shaft_dia =  
-    
+    # motor_shaft_dia =
+
     #Change the hard link to the external equations text file
     eqMgr.FilePath =os.path.abspath(os.path.join(ModelDataDir, 'equations.txt'))
-    
+
     file = open(os.path.abspath(os.path.join(ModelDataDir, 'equations.txt')),'w')
-    
+
     file.write( "\"Propeller Size\"= " + str(prop_dia) + "in" + '\n')
     file.write( "\"Plate Dim X\"= " + str(plate_xdim)+ "in" + '\n')
     file.write( "\"Plate Dim Y\"= " + str(plate_ydim)+ "in" + '\n')
@@ -137,12 +137,12 @@ def build_model(quad,cover_flag, alt_infovar):
     file.write( "\"Motor Shaft Diam\"= " + str(3)+ "mm" + '\n')
     file.close()
     boolstatus = model.EditRebuild3
-    
+
     # Save a single .SLDASM of the whole model for viewing purposes
-    longstatus = model.SaveAs3(modelPath, 0, 0) 
-    
+    longstatus = model.SaveAs3(modelPath, 0, 0)
+
     # Toggle the "save as single STL" preference off
-    
+
     arg1 = win32com.client.VARIANT(pythoncom.VT_I4, 72)
     argBool = win32com.client.VARIANT(pythoncom.VT_BOOL, False)
     swApp.SetUserPreferenceToggle(arg1, argBool)
@@ -154,13 +154,13 @@ def build_model(quad,cover_flag, alt_infovar):
     #swApp.SetUserPreferenceToggle swUserPreferenceToggle_e.swSTLCheckForInterference, True
     # Save a single .STL of the whole model for viewing purposes
     longstatus = model.SaveAs3(ModelDataDir + "\Multirotor.STL", 0, 0)
- 
-    # Toggle the "save as single STL" preference back off  
+
+    # Toggle the "save as single STL" preference back off
     argBool = win32com.client.VARIANT(pythoncom.VT_BOOL, False)
     swApp.SetUserPreferenceToggle(arg1, argBool)
-     
-     
-     
+
+
+
     # Close the model
     model = None
     # swApp.CloseDoc("Quad Assemb.SLDASM")
