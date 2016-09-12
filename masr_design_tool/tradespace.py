@@ -293,6 +293,9 @@ class VariableDistrPlot(ttk.Frame):
         # Set up storage variable to hold the last pick event (see self.plot3d.pick_handler for details)
         self.last_pick_event = matplotlib.backend_bases.PickEvent
 
+        # Set up storage variable to hold the sorted list of alternatives
+        self.f_alts_sorted = self.master.f_alts
+
         # Call plot() for the first time
         self.plot()
 
@@ -315,11 +318,11 @@ class VariableDistrPlot(ttk.Frame):
         attr_name = self.master.attr_names[self.master.attr_dict.keys().index(self.attr2plot_var.get())]
         attr_unit = self.attr2plot_unit_var.get()
 
-        f_alts_sorted = sorted(self.master.f_alts, key=lambda x: getattr(x, attr_name)['value'])
+        self.f_alts_sorted = sorted(self.f_alts_sorted, key=lambda x: getattr(x, attr_name)['value'])
         attr_vals = []
         num_alt_range = range(1, len(self.master.f_alts)+1)
         c = []
-        for alt in f_alts_sorted:
+        for alt in self.f_alts_sorted:
             attr_val = getattr(alt, attr_name)
             attr_vals.append(convert_unit(attr_val['value'], attr_val['unit'], attr_unit))
             if alt.pareto:
@@ -347,7 +350,7 @@ class VariableDistrPlot(ttk.Frame):
                 if event is not self.last_pick_event:
                     self.last_pick_event = event
                     ind = event.ind
-                    selected_alt = self.master.f_alts[ind[0]]
+                    selected_alt = self.f_alts_sorted[ind[0]]
                     DisplayAlternative(self, selected_alt)
         self.canvas.mpl_connect('pick_event', pick_handler)
         self.canvas.show()

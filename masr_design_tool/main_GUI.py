@@ -386,12 +386,11 @@ class MaxBuildDimFrame(ttk.Frame):
         self.printer_combobox.bind("<<ComboboxSelected>>", self.set_values)
         self.printer_combobox.current(0)
         for name in self.printer_combobox['values']:
-                count=0
+                count = 0
                 if name == "HugePrint":
                     self.printer_combobox.current(count)
-                count =  count + 1
+                count += 1
             
-
         self.printer_len_label = ttk.Label(self, text='length')
         self.printer_len_entry = ttk.Entry(self, state='readonly', width=7)
         self.printer_len_unit_cb = ttk.Combobox(self, state='readonly', values=('m', 'cm', 'in'), width=3)
@@ -583,21 +582,16 @@ class MaxBuildDimFrame(ttk.Frame):
         will refresh the combobox list allowing the user to select their newly added printer immediately.
         """
         p_db = shelve.open(db_location + 'printerdb')
-        c_db = shelve.open(db_location + 'cutterdb')
         if p_db:
-            self.printer_combobox['values'] = p_db.keys()
-            self.printer_combobox.current(0)
+            current_printer = self.printer_combobox.get()
+            if set(self.printer_combobox['values']) != set(p_db.keys()):
+                self.printer_combobox['values'] = p_db.keys()
+                if current_printer not in self.printer_combobox['values']:
+                    self.printer_combobox.current(0)
         else:
             self.printer_combobox['values'] = ['No printers']
             self.printer_combobox.current(0)
-        # if c_db:
-        #     self.cutter_combobox['values'] = c_db.keys()
-        #     self.cutter_combobox.current(0)
-        # else:
-        #     self.cutter_combobox['values'] = ['No cutters']
-        #     self.cutter_combobox.current(0)
         p_db.close()
-        c_db.close()
 
 
 class PrintingMaterialFrame(ttk.Frame):
@@ -690,7 +684,10 @@ class DataMgtFrame(ttk.Frame):
         self.columnconfigure(0, weight=1)
 
     def open_database_window(self):
-        db_name = self.db_names[int(self.component_lbox.curselection()[0])]
+        try:
+            db_name = self.db_names[int(self.component_lbox.curselection()[0])]
+        except IndexError:
+            return
         dbmanagement.DatabaseMgtWindow(self, db_name)
 
     def open_export_window(self):
@@ -846,6 +843,7 @@ class AlternativesFrame(ttk.Frame):
         pmaterials = self.master.manuf_req_frame.max_build_dim_frame.pmatlist_frame.get_selected()
 
         # If more constraints are added make sure to check alternatives.py. Some modifications may need to be made.
+        # Also change list in ViewFailedStats class below.
         constraints = [endurance_req, payload_req, max_weight, max_size, maneuverability,
                        p_len, p_width, p_height, max_build_time, sensors, pmaterials, cover_flag]
 
@@ -1097,16 +1095,15 @@ class ViewFailedStats(Toplevel):
         self.geometry('+%d+%d' % (xpos, ypos))
 
         endurance_req, payload_req, max_weight, max_size, maneuverability, \
-            p_len, p_width, p_height, c_len, c_width, max_build_time, sensors = constraints
+            p_len, p_width, p_height, max_build_time, sensors, pmaterials, cover_flag = constraints
         sensors_list = ",".join([s.name for s in sensors])
         self.failed_alts = [alt for alt in self.alternatives if alt.feasible is not True]
 
         self.mainframe = ttk.Frame(self)
         self.mainframe.pack(fill=BOTH, expand=YES)
-        constraints_dict = {"Max dimension too large.": max_size, "Hub too large for cutter": min(c_len, c_width),
-                            "Arms too long for printer.": max(p_len, p_width), "Too heavy.": max_weight,
-                            "Not enough payload capacity.": payload_req, "Not enough endurance.": endurance_req,
-                            "Takes too long to build.": max_build_time,
+        constraints_dict = {"Max dimension too large.": max_size, "Arms too long for printer.": max(p_len, p_width),
+                            "Too heavy.": max_weight, "Not enough payload capacity.": payload_req,
+                            "Not enough endurance.": endurance_req, "Takes too long to build.": max_build_time,
                             "Could not place sensors in/on hub.": sensors_list}
 
         # Create and grid header and separator
