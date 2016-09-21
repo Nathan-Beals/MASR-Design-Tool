@@ -93,18 +93,13 @@ class Quadmultipiece(Vehicle):
         # The following hub dimensions are from David Locascio's documentation on the new quad design
         hub_xdim = convert_unit(4.25, 'in', 'm')
         hub_ydim = convert_unit(5.75, 'in', 'm')
-        hub_separation = convert_unit(1.64, 'in', 'm')
+        hub_separation = convert_unit(1.55, 'in', 'm')
         big_hub_dim = max(hub_xdim, hub_ydim)
 
         safe_factor = 1.15
         n_arms = 4
-#         prop_disc_separation_limited_len = safe_factor * (prop_dia/2/math.sin(math.pi/n_arms) + 0.75*motor_body_dia -
-#                                                          0.5*big_hub_dim)
-#        prop_to_hub_limited_len = safe_factor * \
-#            (prop_dia/2 + 1.5*motor_body_dia/2)
-#        arm_len = max(prop_disc_separation_limited_len, prop_to_hub_limited_len)
-        arm_len = prop_dia/2 + 2.25 # According to David Loccasio's Documentation, in inches
-        arm_len = convert_unit(arm_len, 'in', 'm')
+        arm_len_in = convert_unit(prop_dia, 'm', 'in')*0.357 + 2.965  #in inches
+        arm_len = convert_unit(arm_len_in, 'in', 'm')
         size = math.sqrt(hub_xdim**2 + hub_ydim**2) + 2*arm_len + prop_dia  # This is an approximation
         if size > max_size:
             return "Max dimension too large.", size, None
@@ -113,26 +108,18 @@ class Quadmultipiece(Vehicle):
         if arm_len > max(p_len, p_width):
             return "Arms too long for printer.", arm_len, None
 
-        # We want arm weight and hub weight now. These are calculated using weight/volume regressions as a function of
-        # propeller size.
-        prop_diameters = [0.0254*dia for dia in [5, 6, 7, 8, 9, 10, 11, 12]]
-        arm_volumes = [1.6387e-5*vol for vol in [0.74, 0.86, 1.02, 1.20, 1.38, 1.57, 1.81, 2.04]]
-        base_plate_volumes = [1.6387e-5*vol for vol in [2.29]*len(prop_diameters)]
-        top_plate_volumes = [1.6387e-5*vol for vol in [3.23, 3.13, 3.06, 2.94, 2.84, 2.75, 2.65, 2.56]]
-        top_plate_cover_volumes = [1.6387e-5*vol for vol in [4.58, 4.49, 4.39, 4.29, 4.20, 4.10, 4.00, 3.89]]
-
-        arm_vol = interp(prop_diameters, arm_volumes, prop_dia)
-        base_plate_vol = interp(prop_diameters, base_plate_volumes, prop_dia)
-        top_plate_vol = interp(prop_diameters, top_plate_volumes, prop_dia)
-        top_plate_cover_vol = interp(prop_diameters, top_plate_cover_volumes, prop_dia)
-
+        # Note that the frame volume regressions should probably be the same in the first two terms, since the volume of
+        # the hub top cover should not depend on the length of the arm. This is probably due to rounding error.
         if cover_flag:
-            hub_vol = base_plate_vol + top_plate_cover_vol
+            frame_vol = 0.2954*arm_len_in**2 - 1.0534*arm_len_in + 12.0648  # in cubic inches
         else:
-            hub_vol = base_plate_vol + top_plate_vol
+            frame_vol = 0.2995*arm_len_in**2 - 1.0690*arm_len_in + 10.4840  # in cubic inches
 
-        arm_weight = arm_vol * pmat_density
-        hub_weight = hub_vol * pmat_density
+        # Convert to volume to cubic meters, don't feel like adding volume to tools_convert unit for a one-off
+        frame_vol *= 1.6387e-5
+
+        # Calculate frame weight
+        frame_weight = frame_vol * pmat_density
 
         # The original authors give misc other weights for parts to go into the aggregate weight. Note: if the user
         # wishes to include sensors this weight should also be added.
@@ -143,8 +130,8 @@ class Quadmultipiece(Vehicle):
         compass_weight = convert_unit(0.06062712, 'lbf', 'N')
         receiver_weight = convert_unit(0.033069, 'lbf', 'N')
         propnut_weight = convert_unit(0.0251327, 'lbf', 'N')
-        weights = [arm_weight*n_arms, compass_weight, receiver_weight, apm_weight, wire_weight, esc_weight, propnut_weight]
-        weights += [hub_weight, bat_weight, motor_weight*n_arms, prop_weight*n_arms, sensors_weight]
+        weights = [frame_weight, compass_weight, receiver_weight, apm_weight, wire_weight, esc_weight, propnut_weight]
+        weights += [bat_weight, motor_weight*n_arms, prop_weight*n_arms, sensors_weight]
         vehicle_weight = sum(weights)
         if vehicle_weight > max_weight:
             return "Too heavy.", vehicle_weight, None
@@ -173,22 +160,11 @@ class Quadmultipiece(Vehicle):
         if vehicle_endurance < endurance_req:
             return "Not enough endurance.", vehicle_endurance, None
 
-        # Now calculate the estimated build time based on a regression of experimentally measured times (as a function
-        # of propeller diameter).
-        arm_times = [2.50, 2.66, 2.93, 3.22, 3.50, 3.83, 4.17, 4.38]
-        base_plate_times = [1.63] * len(prop_diameters)
-        top_plate_times = [3.15, 3.03, 2.90, 2.78, 2.67, 2.55, 2.43, 2.30]
-        top_plate_cover_times = [4.72, 4.63, 4.53, 4.43, 4.35, 4.25, 4.13, 4.02]
-
-        arm_time = interp(prop_diameters, arm_times, prop_dia)
-        base_plate_time = interp(prop_diameters, base_plate_times, prop_dia)
-        top_plate_time = interp(prop_diameters, top_plate_times, prop_dia)
-        top_plate_cover_time = interp(prop_diameters, top_plate_cover_times, prop_dia)
-
+        # Calculate build time in minutes using regressions
         if cover_flag:
-            build_time = arm_time*4 + base_plate_time + top_plate_cover_time
+            build_time = (12.6868*arm_len_in**2 - 34.6260*arm_len_in + 832.9249) / 60
         else:
-            build_time = arm_time*4 + base_plate_time + top_plate_time
+            build_time = (13.6458*arm_len_in**2 - 47.1064*arm_len_in + 757.0298) / 60
 
         if build_time > max_build_time:
             return "Takes too long to build.", build_time, None

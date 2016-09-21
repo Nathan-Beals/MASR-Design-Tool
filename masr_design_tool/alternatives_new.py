@@ -22,7 +22,7 @@ def generate_alternatives(constraints):
     pmcombo_db = shelve.open(db_location+'propmotorcombodb')
     battery_db = shelve.open(db_location+'batterydb')
     print_material_db = shelve.open(db_location+'printingmaterialdb')
-    platforms = ['Quadmultipiece', 'Quadonepiece']
+    platforms = ['Quadmultipiece']
 
     # This is a "full factorial" search for possible alternatives. If the number of components available becomes large
     # this method of searching may need to be revised. My logic here saves all alternatives in the 'alternatives' list.

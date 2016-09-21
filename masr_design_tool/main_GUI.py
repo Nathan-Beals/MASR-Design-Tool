@@ -366,17 +366,12 @@ class MaxBuildDimFrame(ttk.Frame):
         self.master = master
 
         printer_db = shelve.open(db_location + 'printerdb')
-        cutter_db = shelve.open(db_location + 'cutterdb')
         if printer_db:
             self.printername_list = printer_db.keys()
         else:
             self.printername_list = ['No printers']
-        if cutter_db:
-            self.cuttername_list = cutter_db.keys()
-        else:
-            self.cuttername_list = ['No cutters']
+
         printer_db.close()
-        cutter_db.close()
 
         # Create widgets within maximum build dimensions frame (which is within manufacturing requirements frame)
         self.max_build_dim_label = ttk.Label(self, text='3D Printer Options')
@@ -416,25 +411,6 @@ class MaxBuildDimFrame(ttk.Frame):
         self.pmat_label = ttk.Label(self, text='Print Materials')
         self.pmatlist_frame = PrintingMaterialFrame(self)
 
-        # self.cutter_label = ttk.Label(self, text='Laser Cutter')
-        # self.cutter_combobox = ttk.Combobox(self, state='readonly', values=self.cuttername_list)
-        # self.cutter_combobox.bind("<<ComboboxSelected>>", self.set_values)
-        # self.cutter_combobox.current(0)
-        #
-        # self.cutter_len_label = ttk.Label(self, text='length')
-        # self.cutter_len_entry = ttk.Entry(self, state='readonly', width=7)
-        # self.cutter_len_unit_cb = ttk.Combobox(self, state='readonly', values=('m', 'cm', 'in'), width=3)
-        # self.cutter_len_unit_cb.bind("<<ComboboxSelected>>",
-        #                              lambda event, entry_name='cutter_len':
-        #                              self.new_unit_selection(event, entry_name))
-        #
-        # self.cutter_width_label = ttk.Label(self, text='width')
-        # self.cutter_width_entry = ttk.Entry(self, state='readonly', width=7)
-        # self.cutter_width_unit_cb = ttk.Combobox(self, state='readonly', values=('m', 'cm', 'in'), width=3)
-        # self.cutter_width_unit_cb.bind("<<ComboboxSelected>>",
-        #                                lambda event, entry_name='cutter_width':
-        #                                self.new_unit_selection(event, entry_name))
-
         # Initialize entry and combobox values based on first printer and cutter
         self.set_values()
 
@@ -457,15 +433,6 @@ class MaxBuildDimFrame(ttk.Frame):
         self.pmat_label.grid(column=3, row=1, sticky=W, padx='10 0')
         self.pmatlist_frame.grid(column=3, row=2, rowspan=6, sticky=E)
 
-        # self.cutter_label.grid(column=3, row=1, columnspan=3, sticky=W, padx=5)
-        # self.cutter_combobox.grid(column=3, row=2, columnspan=3, sticky=W, padx=5, pady='0 2')
-        # self.cutter_len_label.grid(column=3, row=3, sticky=W, padx=5, pady='2 2')
-        # self.cutter_len_entry.grid(column=4, row=3, sticky=W, pady='2 2')
-        # self.cutter_len_unit_cb.grid(column=5, row=3, sticky=W, padx='0 5', pady='2 5')
-        # self.cutter_width_label.grid(column=3, row=4, sticky=W, padx=5, pady='2 5')
-        # self.cutter_width_entry.grid(column=4, row=4, sticky=W, pady='2 5')
-        # self.cutter_width_unit_cb.grid(column=5, row=4, sticky=W, padx='0 5', pady='2 5')
-
         # Manage frame resizing
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
@@ -480,9 +447,9 @@ class MaxBuildDimFrame(ttk.Frame):
         respective databases.
         """
         printer_db = shelve.open(db_location + 'printerdb')
-        cutter_db = shelve.open(db_location + 'cutterdb')
+
         self.printer_combobox['width'] = len(self.printer_combobox.get()) + 2
-        # self.cutter_combobox['width'] = len(self.cutter_combobox.get()) + 2
+
         if not printer_db:
             self.printer_combobox.current(0)
             self.printer_len_unit_cb.current(0)
@@ -511,26 +478,7 @@ class MaxBuildDimFrame(ttk.Frame):
             self.printer_height_unit_cb.current(self.printer_height_unit_cb['values']
                                                 .index(str(current_printer.height['unit'])))
 
-        # if not cutter_db:
-        #     self.cutter_combobox.current(0)
-        #     self.cutter_len_unit_cb.current(0)
-        #     self.cutter_width_unit_cb.current(0)
-        # else:
-        #     current_cutter = cutter_db[self.cutter_combobox.get()]
-        #     self.cutter_len_entry['state'] = NORMAL
-        #     self.cutter_len_entry.delete(0, END)
-        #     self.cutter_len_entry.insert(0, '%0.3f' % current_cutter.length['value'])
-        #     self.cutter_len_entry['state'] = 'readonly'
-        #     self.cutter_len_unit_cb.current(self.cutter_len_unit_cb['values']
-        #                                     .index(str(current_cutter.length['unit'])))
-        #     self.cutter_width_entry['state'] = NORMAL
-        #     self.cutter_width_entry.delete(0, END)
-        #     self.cutter_width_entry.insert(0, '%0.3f' % current_cutter.width['value'])
-        #     self.cutter_width_entry['state'] = 'readonly'
-        #     self.cutter_width_unit_cb.current(self.cutter_width_unit_cb['values']
-        #                                       .index(str(current_cutter.width['unit'])))
         printer_db.close()
-        cutter_db.close()
 
     def new_unit_selection(self, event, entry_name):
         """
@@ -539,9 +487,8 @@ class MaxBuildDimFrame(ttk.Frame):
         does not impact the value of the object in the database, which is always stored in base metric units.
         """
         p_db = shelve.open(db_location + 'printerdb')
-        c_db = shelve.open(db_location + 'cutterdb')
         selected_printer = p_db[self.printer_combobox.get()]
-        # selected_cutter = c_db[self.cutter_combobox.get()]
+
         if entry_name == 'printer_len':
             self.printer_len_entry['state'] = NORMAL
             self.printer_len_entry.delete(0, END)
@@ -560,20 +507,8 @@ class MaxBuildDimFrame(ttk.Frame):
             new_val = convert_unit(selected_printer.height['value'], 'm', self.printer_height_unit_cb.get())
             self.printer_height_entry.insert(0, '%0.3f' % new_val)
             self.printer_height_entry['state'] = 'readonly'
-        # elif entry_name == 'cutter_len':
-        #     self.cutter_len_entry['state'] = NORMAL
-        #     self.cutter_len_entry.delete(0, END)
-        #     new_val = convert_unit(selected_cutter.length['value'], 'm', self.cutter_len_unit_cb.get())
-        #     self.cutter_len_entry.insert(0, '%0.3f' % new_val)
-        #     self.cutter_len_entry['state'] = 'readonly'
-        # elif entry_name == 'cutter_width':
-        #     self.cutter_width_entry['state'] = NORMAL
-        #     self.cutter_width_entry.delete(0, END)
-        #     new_val = convert_unit(selected_cutter.width['value'], 'm', self.cutter_width_unit_cb.get())
-        #     self.cutter_width_entry.insert(0, '%0.3f' % new_val)
-        #     self.cutter_width_entry['state'] = 'readonly'
+
         p_db.close()
-        c_db.close()
 
     def refresh_printer_cutter_lists(self):
         """
@@ -659,12 +594,10 @@ class DataMgtFrame(ttk.Frame):
         f.configure(underline=False)
         self.data_mgt_title.configure(font=f)
 
-        self.components = ['Batteries', 'Propellers', 'Motors',
-                           'Prop/Motor Combos', '3D Printers', 'Laser Cutters',
-                           'Printing Materials', 'Cutting Materials', 'Sensors']
-        self.db_names = ['batterydb', 'propellerdb', 'motordb',
-                         'propmotorcombodb', 'printerdb', 'cutterdb',
-                         'printingmaterialdb', 'cuttingmaterialdb', 'sensordb']
+        self.components = ['Batteries', 'Propellers', 'Motors', 'Prop/Motor Combos',
+                           '3D Printers', 'Printing Materials', 'Sensors']
+        self.db_names = ['batterydb', 'propellerdb', 'motordb', 'propmotorcombodb',
+                         'printerdb', 'printingmaterialdb', 'sensordb']
         self.component_lbox = Listbox(self, height=len(self.components), selectmode='browse')
         for comp in self.components:
             self.component_lbox.insert(END, comp)
@@ -819,9 +752,7 @@ class AlternativesFrame(ttk.Frame):
         coefficients to metric without completely re-deriving the equations, which may be a project for another day.
         """
         p_db = shelve.open(db_location + 'printerdb')
-        c_db = shelve.open(db_location + 'cutterdb')
         selected_printer = p_db[self.master.manuf_req_frame.max_build_dim_frame.printer_combobox.get()]
-        #selected_cutter = c_db[self.master.manuf_req_frame.max_build_dim_frame.cutter_combobox.get()]
 
         endurance_req = float(self.master.vehicle_req_frame.endurance_var.get())   # Endurance in minutes
         payload_req = float(self.master.vehicle_req_frame.payload_var.get())
@@ -835,8 +766,6 @@ class AlternativesFrame(ttk.Frame):
         p_len = convert_unit(selected_printer.length['value'], selected_printer.length['unit'], 'm')
         p_width = convert_unit(selected_printer.width['value'], selected_printer.width['unit'], 'm')
         p_height = convert_unit(selected_printer.height['value'], selected_printer.height['unit'], 'm')
-        # c_len = convert_unit(selected_cutter.length['value'], selected_cutter.length['unit'], 'in')
-        # c_width = convert_unit(selected_cutter.width['value'], selected_cutter.width['unit'], 'in')
         max_build_time = float(self.master.manuf_req_frame.build_time_var.get())   # Build time in hours
         # Get selected sensors
         sensors = self.master.sensor_frame.get_selected()
@@ -848,7 +777,7 @@ class AlternativesFrame(ttk.Frame):
                        p_len, p_width, p_height, max_build_time, sensors, pmaterials, cover_flag]
 
         p_db.close()
-        c_db.close()
+
         return constraints
 
     def resort(self, event):
