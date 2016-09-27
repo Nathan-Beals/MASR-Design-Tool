@@ -22,6 +22,8 @@ import tradespace
 import buildmodel
 from tools import convert_unit
 from winplace import get_win_place
+from vincenty import vincenty
+import math
 
 db_location = dblocation.db_location
 
@@ -183,16 +185,57 @@ class VehicleReqFrame(ttk.Frame):
         python tool then reads the file, to determine the total endurance and range required.'''
 
         mission_planner = tkFileDialog.askopenfilename(title='Select path to mission planner...',
-                                                       filetypes=[('EXE files', '*.exe')])
+                                                       filetypes=[('EXE files', '*.exe')],
+                                                       initialdir="Mission Planner\\",
+                                                       initialfile="MissionPlanner")
         process = subprocess.Popen(mission_planner)
         process.wait()
         filename = tkFileDialog.askopenfilename(title='Select the waypoints file...',
-                                                filetypes=[('Waypoint files', '*.waypoints')])
+                                                filetypes=[('Waypoint files', '*.waypoints')],
+                                                initialdir="Mission Planner\\Waypoints\\")
 
-        quad_velocity = 5 # m/s
+        quad_velocity = 2 # m/s
 
-        file = open(filename, 'r')
-        lines = file.readlines()[1:]
+        with open(filename, 'r') as file:
+            waypoints = []
+            next(file)
+            for line in file:
+                line = line.split()
+                values = [float(v) for v in line]
+                waypoints.append(values)
+
+        hover = zip(*waypoints)[4]
+        x_coordinate = zip(*waypoints)[8]
+        y_coordinate = zip(*waypoints)[9]
+        z_coordinate = zip(*waypoints)[10]
+        print hover
+        print x_coordinate
+        print y_coordinate
+        print z_coordinate
+
+        endurance = 0.0
+        quad_range = 0.0
+        for i in range(1, len(hover)):
+            temp_range = vincenty((x_coordinate[i],y_coordinate[i]),
+                                   (x_coordinate[i-1],y_coordinate[i-1]), miles=False)
+            if abs(z_coordinate[i]-z_coordinate[i-1]) > 10e-3:
+                temp_range = math.sqrt(temp_range**2 + ((z_coordinate[i]-z_coordinate[i-1])*10e-3)**2)
+                quad_range += temp_range
+            else:
+                quad_range += temp_range
+
+        quad_range *=1000.0
+        endurance = (quad_range/quad_velocity) / 60.0
+        hover_time = sum(hover) / 60.0
+        endurance += hover_time
+        endurance *= 1.3
+        quad_range *= 1.3
+
+        print endurance
+        print quad_range
+
+        self.endurance_entry.delete(0, last=END)
+        self.endurance_entry.insert(0, endurance)
 
 
     def set_weightings(self):
