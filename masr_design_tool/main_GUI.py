@@ -6,6 +6,7 @@ except ImportError:
     from tkinter import *
 import csv
 import os
+import subprocess
 import shelve
 import sys
 import tkFileDialog
@@ -30,6 +31,7 @@ class QuadGUI(ttk.Frame):
     The QuadGUI class is the main frame that fills the entire root window. It holds subframes including the vehicle
     requirements frame, the manufacturing requirements frame, the data management frame, and the alternatives frame.
     """
+
     def __init__(self, master):
         ttk.Frame.__init__(self, master, padding=3)
         # master.report_callback_exception = self.report_callback_exception
@@ -56,12 +58,12 @@ class QuadGUI(ttk.Frame):
         self.columnconfigure(3, weight=1)
         self.rowconfigure(1, weight=1)
 
-    # def report_callback_exception(self, *args):
-    #     err = traceback.format_exception(*args)
-    #     log_filename = '../logfiles/logfile.log'
-    #     logging.basicConfig(filename=log_filename, level=logging.DEBUG)
-    #     logging.debug(str(err))
-    #     tkMessageBox.showerror('Exception', err)
+        # def report_callback_exception(self, *args):
+        #     err = traceback.format_exception(*args)
+        #     log_filename = '../logfiles/logfile.log'
+        #     logging.basicConfig(filename=log_filename, level=logging.DEBUG)
+        #     logging.debug(str(err))
+        #     tkMessageBox.showerror('Exception', err)
 
 
 class VehicleReqFrame(ttk.Frame):
@@ -76,6 +78,7 @@ class VehicleReqFrame(ttk.Frame):
     'self.weights'. In addition, the 'requirements' list of names that is passed to the weightings toplevel located in
     the set_weightings() method will need to be updated.
     """
+
     def __init__(self, master):
         ttk.Frame.__init__(self, master, borderwidth=2, relief='sunken')
         self.master = master
@@ -160,6 +163,11 @@ class VehicleReqFrame(ttk.Frame):
         self.columnconfigure(0, weight=1)
         self.columnconfigure(4, weight=1)
 
+        # Create Endurance/Range button
+        self.weightings_button = ttk.Button(self.wgt_frame, text='Get Endurance/Range',
+                                            command=self.get_endurance)
+        self.weightings_button.pack()
+
         # Create weightings button
         self.weightings_button = ttk.Button(self.wgt_frame, text='Set Importance Ratings',
                                             command=self.set_weightings)
@@ -168,6 +176,24 @@ class VehicleReqFrame(ttk.Frame):
         # Pack subframes
         self.constraints_frame.pack(fill=BOTH, expand=YES)
         self.wgt_frame.pack(fill=BOTH, expand=YES)
+
+    def get_endurance(self):
+        '''This function opens up the mission planner provided in the toolkit to enable the user to select and define
+        waypoints which make up the mission. This information then needs to be exported to a waypoints file. The
+        python tool then reads the file, to determine the total endurance and range required.'''
+
+        mission_planner = tkFileDialog.askopenfilename(title='Select path to mission planner...',
+                                                       filetypes=[('EXE files', '*.exe')])
+        process = subprocess.Popen(mission_planner)
+        process.wait()
+        filename = tkFileDialog.askopenfilename(title='Select the waypoints file...',
+                                                filetypes=[('Waypoint files', '*.waypoints')])
+
+        quad_velocity = 5 # m/s
+
+        file = open(filename, 'r')
+        lines = file.readlines()[1:]
+
 
     def set_weightings(self):
         """
@@ -193,6 +219,7 @@ class WeightingsWindow(Toplevel):
         requirements list and update the variable 'self.master.weights' in the general case. Therefore it should not
         need to be updated if new vehicle requirements are added to the vehicle requirements frame.
     """
+
     def __init__(self, master, requirements):
 
         Toplevel.__init__(self, master)
@@ -272,6 +299,7 @@ class SensorFrame(ttk.Frame):
     the vehicle. It creates a checkbox for each sensor in the sensor database during initialization. Also contains a
     get_selected method which returns a list of currently selected sensor objects.
     """
+
     def __init__(self, master):
         ttk.Frame.__init__(self, master, borderwidth=2, relief='sunken')
         self.master = master
@@ -361,6 +389,7 @@ class MaxBuildDimFrame(ttk.Frame):
     Subframe in the main GUI window which contains all widgets related to constraints due to manufacturing, such as
     printer and cutter dimensions as well as maximum allowable build time.
     """
+
     def __init__(self, master):
         ttk.Frame.__init__(self, master, borderwidth=1, relief='ridge')
         self.master = master
@@ -381,11 +410,11 @@ class MaxBuildDimFrame(ttk.Frame):
         self.printer_combobox.bind("<<ComboboxSelected>>", self.set_values)
         self.printer_combobox.current(0)
         for name in self.printer_combobox['values']:
-                count = 0
-                if name == "HugePrint":
-                    self.printer_combobox.current(count)
-                count += 1
-            
+            count = 0
+            if name == "HugePrint":
+                self.printer_combobox.current(count)
+            count += 1
+
         self.printer_len_label = ttk.Label(self, text='length')
         self.printer_len_entry = ttk.Entry(self, state='readonly', width=7)
         self.printer_len_unit_cb = ttk.Combobox(self, state='readonly', values=('m', 'cm', 'in'), width=3)
@@ -534,6 +563,7 @@ class PrintingMaterialFrame(ttk.Frame):
     This is the ttk.Frame class which defines the pmat_frame within the manufacturing requirements frame. It is very
     similar to the SensorFrame class.
     """
+
     def __init__(self, master):
         ttk.Frame.__init__(self, master)
         self.master = master
@@ -556,10 +586,10 @@ class PrintingMaterialFrame(ttk.Frame):
             # for ease of debugging
             if pmat.name == "Stratasys-FDM-Nylon12":
                 checkvar.set(1)
-            
+
             check.pack(pady=5, anchor=W)
             self.checkvar_list.append(checkvar)
-        
+
         pmat_db.close()
 
         self.check_frame.pack_forget()
@@ -584,6 +614,7 @@ class DataMgtFrame(ttk.Frame):
     as the "View Database" and "Export Database(s)" buttons. IF DEVELOPERS IN THE FUTURE WANT TO ADD COMPONENT TYPES TO
     THE APPLICATION, THE VARIABLES "self.components" and "self.db_names" WILL NEED TO BE UPDATED APPROPRIATELY.
     """
+
     def __init__(self, master):
         ttk.Frame.__init__(self, master, borderwidth=2, relief='sunken')
         self.master = master
@@ -631,6 +662,7 @@ class AlternativesFrame(ttk.Frame):
     """
     This is the main alternatives frame which takes up the bottom half of the main GUI window.
     """
+
     def __init__(self, master):
         ttk.Frame.__init__(self, master, borderwidth=2, relief='sunken')
         self.master = master
@@ -655,7 +687,7 @@ class AlternativesFrame(ttk.Frame):
                                         ('payload', 'max_payload'), ('build time', 'build_time'),
                                         ('weight', 'weight'), ('max dimension', 'max_dimension')])
         self.sortby_cb = ttk.Combobox(self.header_frame, values=self.sortby_vals.keys(), state='readonly',
-                                      width=len(max(self.sortby_vals, key=len))+2)
+                                      width=len(max(self.sortby_vals, key=len)) + 2)
         self.sortby_cb.current(0)
         self.sortby_cb.bind("<<ComboboxSelected>>", self.resort)
 
@@ -737,7 +769,7 @@ class AlternativesFrame(ttk.Frame):
         # Now we want to score the feasible alternatives based on user-defined vehicle requirements weightings
         if self.f_alternatives:
             self.f_alternatives = alternatives_new.score_alternatives(self.f_alternatives,
-                                                                  self.master.vehicle_req_frame.weights)
+                                                                      self.master.vehicle_req_frame.weights)
         self.alt_view_frame.interior.refresh_alt_sheet()
         self.alt_view_frame.interior.config(width=505)
 
@@ -754,7 +786,7 @@ class AlternativesFrame(ttk.Frame):
         p_db = shelve.open(db_location + 'printerdb')
         selected_printer = p_db[self.master.manuf_req_frame.max_build_dim_frame.printer_combobox.get()]
 
-        endurance_req = float(self.master.vehicle_req_frame.endurance_var.get())   # Endurance in minutes
+        endurance_req = float(self.master.vehicle_req_frame.endurance_var.get())  # Endurance in minutes
         payload_req = float(self.master.vehicle_req_frame.payload_var.get())
         payload_req = convert_unit(payload_req, self.master.vehicle_req_frame.payload_unit_cb.get(), 'N')
         max_weight = float(self.master.vehicle_req_frame.max_weight_var.get())
@@ -766,7 +798,7 @@ class AlternativesFrame(ttk.Frame):
         p_len = convert_unit(selected_printer.length['value'], selected_printer.length['unit'], 'm')
         p_width = convert_unit(selected_printer.width['value'], selected_printer.width['unit'], 'm')
         p_height = convert_unit(selected_printer.height['value'], selected_printer.height['unit'], 'm')
-        max_build_time = float(self.master.manuf_req_frame.build_time_var.get())   # Build time in hours
+        max_build_time = float(self.master.manuf_req_frame.build_time_var.get())  # Build time in hours
         # Get selected sensors
         sensors = self.master.sensor_frame.get_selected()
         pmaterials = self.master.manuf_req_frame.max_build_dim_frame.pmatlist_frame.get_selected()
@@ -797,8 +829,8 @@ class AlternativesFrame(ttk.Frame):
         quad_selected_indx = self.alt_view_frame.interior.current_object_selection.get()
         selected_quad = self.f_alternatives[quad_selected_indx]
         try:
-            import buildmodel 
-            buildmodel.build_model(selected_quad,self.master.vehicle_req_frame.cover_checkvar.get(),self.alt_infovar)
+            import buildmodel
+            buildmodel.build_model(selected_quad, self.master.vehicle_req_frame.cover_checkvar.get(), self.alt_infovar)
         except ImportError:
             self.alt_infovar.set("Required modules not installed for export.")
             return
@@ -846,7 +878,7 @@ class AlternativesFrame(ttk.Frame):
 
         # Save to a .csv file located at dirname/f_alternatives.csv
         try:
-            with open(dirname+'/'+'f_alternatives'+'.csv', 'wb') as csvfile:
+            with open(dirname + '/' + 'f_alternatives' + '.csv', 'wb') as csvfile:
                 writer = csv.writer(csvfile, dialect='excel')
                 writer.writerow(header)
                 # Create object rows
@@ -877,6 +909,7 @@ class VertScrolledFrame(ttk.Frame):
     """
     Class for vertical scrolled frame. This blueprint for this code was written by stackOverflow user Gonzo.
     """
+
     def __init__(self, master):
         ttk.Frame.__init__(self, master)
         # create a canvas object and a vertical scrollbar for scrolling it
@@ -918,6 +951,7 @@ class AlternativesSheet(ttk.Frame):
     This class defines the "spreadsheet" of feasible alternatives that appears on the main GUI after a user has selected
     "Find Alternatives".
     """
+
     def __init__(self, master):
         ttk.Frame.__init__(self, master, width=500, height=300, padding='10 0 10 0')
         self.master = master
@@ -957,6 +991,7 @@ class ViewQuadDetails(Toplevel):
     This class defines the toplevel window that appears when the user selects the "View Details" button on the main GUI.
     It simply displays all of the information pertaining to the selected feasible alternative.
     """
+
     def __init__(self, master, quad):
         Toplevel.__init__(self, master)
         self.master = master
@@ -1016,6 +1051,7 @@ class ViewFailedStats(Toplevel):
     after finding alternatives for a set of constraints. It retrieves the alternative.feasible attribute values for the
     failed alternatives and organizes them so the user can see the most common reasons for alternative failure.
     """
+
     def __init__(self, master, quad_alts, constraints):
         Toplevel.__init__(self, master)
         self.master = master
@@ -1024,7 +1060,7 @@ class ViewFailedStats(Toplevel):
         self.geometry('+%d+%d' % (xpos, ypos))
 
         endurance_req, payload_req, max_weight, max_size, maneuverability, \
-            p_len, p_width, p_height, max_build_time, sensors, pmaterials, cover_flag = constraints
+        p_len, p_width, p_height, max_build_time, sensors, pmaterials, cover_flag = constraints
         sensors_list = ",".join([s.name for s in sensors])
         self.failed_alts = [alt for alt in self.alternatives if alt.feasible is not True]
 
@@ -1093,6 +1129,7 @@ def main():
     root.rowconfigure(0, weight=1)
     root.protocol('WM_DELETE_WINDOW', mainframe.alternatives_frame.close_tool)
     root.mainloop()
+
 
 if __name__ == '__main__':
     main()
